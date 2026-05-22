@@ -2195,6 +2195,246 @@ notes额外美化效果 */
     color: #383d41;
 }
 
+/* ========== 房源点击跳转走势图 ========== */
+.property-clickable {
+    cursor: pointer;
+}
+
+.property-clickable:hover {
+    background: #eef0ff !important;
+}
+
+.trend-icon {
+    font-size: 14px;
+    margin-left: 6px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.property-clickable:hover .trend-icon {
+    opacity: 1;
+}
+
+/* ========== 走势图页面 ========== */
+.trend-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 24px;
+    color: white;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+.trend-header h1 {
+    color: white;
+    margin: 0 0 20px 0;
+    font-size: 24px;
+}
+
+.trend-header .info-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.trend-header .info-item {
+    background: rgba(255,255,255,0.15);
+    padding: 10px 14px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.trend-header .info-item label {
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.trend-header .info-item span {
+    color: white;
+    font-weight: 600;
+}
+
+.trend-header .price-highlight {
+    color: #ffd700 !important;
+    font-size: 18px !important;
+}
+
+.back-link {
+    display: inline-block;
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    margin-bottom: 20px;
+    transition: all 0.2s;
+}
+
+.back-link:hover {
+    color: #764ba2;
+    transform: translateX(-4px);
+}
+
+.trend-charts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+}
+
+.chart-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 350px;
+}
+
+.chart-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.loading-hint {
+    text-align: center;
+    color: #6c757d;
+    padding: 40px;
+    font-size: 15px;
+}
+
+.error-message {
+    text-align: center;
+    color: #dc3545;
+    padding: 20px;
+    background: #f8d7da;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+/* ========== 变化排行Tab ========== */
+.changes-info {
+    margin-bottom: 16px;
+}
+
+.changes-subtitle {
+    color: #6c757d;
+    font-size: 13px;
+    margin: 0;
+}
+
+.changes-table .rank-cell {
+    text-align: center;
+    width: 60px;
+}
+
+.rank-badge {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.rank-badge.rank-top1 {
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #5d4037;
+    box-shadow: 0 2px 12px rgba(255, 179, 0, 0.4);
+    animation: rankGlow 2s ease-in-out infinite;
+}
+
+.rank-badge.rank-top2 {
+    background: linear-gradient(135deg, #e0e0e0, #bdbdbd);
+    color: #424242;
+    box-shadow: 0 2px 12px rgba(158, 158, 158, 0.4);
+}
+
+.rank-badge.rank-top3 {
+    background: linear-gradient(135deg, #ffab91, #e64a19);
+    color: white;
+    box-shadow: 0 2px 12px rgba(230, 74, 25, 0.4);
+}
+
+.rank-badge.rank-normal {
+    background: #f1f3f5;
+    color: #495057;
+}
+
+@keyframes rankGlow {
+    0%, 100% { box-shadow: 0 2px 12px rgba(255, 179, 0, 0.4); }
+    50% { box-shadow: 0 4px 20px rgba(255, 179, 0, 0.7); }
+}
+
+.change-count {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f1f3f5;
+    color: #6c757d;
+}
+
+.change-count.has-changes {
+    background: linear-gradient(135deg, #ffe0e0, #ffcccc);
+    color: #c62828;
+}
+
+.price-range-cell {
+    font-weight: 600;
+    color: #e65100;
+}
+
+.score-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.trend-btn-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.trend-btn-small:hover {
+    background: linear-gradient(135deg, #5a67d8, #6b46c1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+}
+
+/* ========== 响应式 - 走势图 ========== */
+@media (min-width: 1024px) {
+    .trend-charts {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .tabs {

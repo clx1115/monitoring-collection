@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房源走势 - {{ property.title if property else '未找到' }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+
+        <a href="/detail/{{ community.id }}" class="back-link">← 返回社区详情</a>
+
+        {% if property %}
+        <div class="trend-header">
+            <h1>{{ property.title }}</h1>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>社区:</label>
+                    <span>{{ community.name }}</span>
+                </div>
+                <div class="info-item">
+                    <label>卧室:</label>
+                    <span>{{ property.bedrooms or '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <label>浴室:</label>
+                    <span>{{ property.bathrooms or '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <label>面积:</label>
+                    <span>{% if property.size %}{{ property.size|int }} sq ft{% else %}-{% endif %}</span>
+                </div>
+                <div class="info-item">
+                    <label>当前价格:</label>
+                    <span class="price-highlight">
+                        {% if property.price %}${{ "{:,.0f}".format(property.price) }}{% else %}-{% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <label>当前状态:</label>
+                    <span>
+                        {% set status_map = {'For Sale': '在售', 'Coming Soon': '即将推出', 'Sold': '已售'} %}
+                        <span class="property-status status-{{ property.status.lower().replace(' ', '-') if property.status else 'unknown' }}">
+                            {{ status_map.get(property.status, property.status or '-') }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <label>最低价格:</label>
+                    <span>
+                        {% if property.lowest_price %}${{ "{:,.0f}".format(property.lowest_price) }}{% else %}-{% endif %}
+                        {% if property.lowest_price_time %}<br><small>{{ property.lowest_price_time }}</small>{% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <label>最高价格:</label>
+                    <span>
+                        {% if property.highest_price %}${{ "{:,.0f}".format(property.highest_price) }}{% else %}-{% endif %}
+                        {% if property.highest_price_time %}<br><small>{{ property.highest_price_time }}</small>{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="trend-charts">
+            <div class="chart-card">
+                <h3>📈 价格走势</h3>
+                <div class="chart-wrapper">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>🔄 状态变化时间线</h3>
+                <div class="chart-wrapper">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="chart-error" class="error-message" style="display:none;"></div>
+        <div id="chart-loading" class="loading-hint">加载历史数据中...</div>
+
+        {% else %}
+        <p class="error">未找到该房源信息</p>
+        {% endif %}
+    </div>
+
+    <script>
+        const communityId = {{ community.id }};
+        const propertyUuid = '{{ property.property_uuid }}';
+        const propertyTitle = '{{ property.title }}';
+
+        async function loadHistoryData() {
+            try {
+                const response = await fetch(`/api/property-history/${communityId}/${propertyUuid}`);
+                if (!response.ok) throw new Error('加载失败');
+                const data = await response.json();
+                document.getElementById('chart-loading').style.display = 'none';
+
+                if (!data || data.length === 0) {
+                    document.getElementById('chart-error').style.display = 'block';
+                    document.getElementById('chart-error').textContent = '暂无历史采集数据';
+                    return;
+                }
+
+                renderCharts(data);
+            } catch (e) {
+                document.getElementById('chart-loading').style.display = 'none';
+                document.getElementById('chart-error').style.display = 'block';
+                document.getElementById('chart-error').textContent = '加载历史数据失败: ' + e.message;
+            }
+        }
+
+        function renderCharts(data) {
+            const labels = data.map(d => d.archive_time || '采集#' + d.archive_no);
+            const prices = data.map(d => d.listing_price);
+            const statuses = data.map(d => d.status);
+
+            // 价格走势图
+            const priceCtx = document.getElementById('priceChart').getContext('2d');
+            new Chart(priceCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '价格 ($)',
+                        data: prices,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '$' + ctx.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0,
+                                font: { size: 11 }
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(v) {
+                                    return '$' + (v / 1000).toFixed(0) + 'k';
+                                },
+                                font: { size: 11 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        }
+                    }
+                }
+            });
+
+            // 状态变化图 (用散点图展示时间线上的状态变化)
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            const statusColors = {
+                'For Sale': '#28a745',
+                'Coming Soon': '#ffc107',
+                'Sold': '#dc3545'
+            };
+            const statusY = {
+                'For Sale': 2,
+                'Coming Soon': 1,
+                'Sold': 0
+            };
+            const statusLabels = {
+                'For Sale': '在售',
+                'Coming Soon': '即将推出',
+                'Sold': '已售'
+            };
+
+            const pointColors = statuses.map(s => statusColors[s] || '#6c757d');
+
+            new Chart(statusCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '状态',
+                        data: statuses.map(s => statusY[s] !== undefined ? statusY[s] : -1),
+                        borderColor: '#764ba2',
+                        backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0,
+                        stepped: true,
+                        pointRadius: 8,
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const s = statuses[ctx.dataIndex];
+                                    return (statusLabels[s] || s);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0,
+                                font: { size: 11 }
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            min: -0.5,
+                            max: 2.5,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(v) {
+                                    if (v === 2) return '在售';
+                                    if (v === 1) return '即将推出';
+                                    if (v === 0) return '已售';
+                                    return '';
+                                },
+                                font: { size: 12 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 页面加载完成后获取数据
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistoryData();
+        });
+    </script>
+</body>
+</html>

@@ -782,6 +782,226 @@ def get_batch_collection_status():
         'recovered': batch_collection_state.get('recovered', False)  # 是否是恢复的任务
     })
 
+# ==================== 房源走势图功能 ====================
+
+@app.route('/property-trend/<int:community_id>/<property_uuid>')
+def property_trend(community_id, property_uuid):
+    """显示某个房源的价格和状态走势图页面"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    # 获取社区信息
+    cursor.execute("""
+        SELECT id, name, uuid FROM community_cache WHERE id = %s
+    """, (community_id,))
+    community = cursor.fetchone()
+    
+    if not community:
+        cursor.close()
+        conn.close()
+        return "社区不存在", 404
+    
+    # 获取房源当前信息
+    cursor.execute("""
+        SELECT id, property_uuid, community_id,
+               CAST(title AS CHAR) as title,
+               bedrooms, bathrooms, size, price, status,
+               lowest_price, highest_price,
+               DATE_FORMAT(lowest_price_time, '%%Y-%%m-%%d %%H:%%i:%%s') as lowest_price_time,
+               DATE_FORMAT(highest_price_time, '%%Y-%%m-%%d %%H:%%i:%%s') as highest_price_time,
+               DATE_FORMAT(created_time, '%%Y-%%m-%%d %%H:%%i:%%s') as created_time,
+               DATE_FORMAT(update_time, '%%Y-%%m-%%d %%H:%%i:%%s') as update_time
+        FROM property
+        WHERE community_id = %s AND property_uuid = %s
+    """, (community_id, property_uuid))
+    property_info = cursor.fetchone()
+    
+    if not property_info:
+        cursor.close()
+        conn.close()
+        return "房源不存在", 404
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('property_trend.html', 
+                           community=community, 
+                           property=property_info)
+
+
+@app.route('/api/property-history/<int:community_id>/<property_uuid>')
+def get_property_history(community_id, property_uuid):
+    """获取房源历史价格和状态数据"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    # 获取社区UUID和房源title
+    cursor.execute("SELECT uuid FROM community_cache WHERE id = %s", (community_id,))
+    community = cursor.fetchone()
+    if not community:
+        cursor.close()
+        conn.close()
+        return jsonify({'error': '社区不存在'}), 404
+    
+    cursor.execute("""
+        SELECT CAST(title AS CHAR) as title
+        FROM property
+        WHERE community_id = %s AND property_uuid = %s
+    """, (community_id, property_uuid))
+    prop = cursor.fetchone()
+    if not prop:
+        cursor.close()
+        conn.close()
+        return jsonify({'error': '房源不存在'}), 404
+    
+    community_uuid = community['uuid']
+    property_title = prop['title']
+    
+    # 获取该房源在各次采集中的历史数据
+    cursor.execute("""
+        SELECT pa.listing_price, pa.status, pa.archive_no,
+               CAST(pa.title AS CHAR) as title,
+               ca.archive_time
+        FROM property_archive pa
+        LEFT JOIN community_archive ca 
+            ON ca.uuid = pa.community_uuid AND ca.archive_no = pa.archive_no
+        WHERE pa.community_uuid = %s AND pa.title = %s
+        ORDER BY pa.archive_no ASC
+    """, (community_uuid, property_title))
+    history = cursor.fetchall()
+    
+    # 获取社区采集时间轴
+    cursor.execute("""
+        SELECT archive_no, 
+               DATE_FORMAT(archive_time, '%%Y-%%m-%%d %%H:%%i:%%s') as archive_time
+        FROM community_archive
+        WHERE uuid = %s
+        ORDER BY archive_no ASC
+    """, (community_uuid,))
+    archive_times = cursor.fetchall()
+    archive_time_map = {a['archive_no']: a['archive_time'] for a in archive_times}
+    
+    cursor.close()
+    conn.close()
+    
+    # 格式化数据
+    result = []
+    for item in history:
+        result.append({
+            'archive_no': item['archive_no'],
+            'archive_time': archive_time_map.get(item['archive_no'], f'采集#{item["archive_no"]}'),
+            'listing_price': item['listing_price'],
+            'status': item['status']
+        })
+    
+    return jsonify(result)
+
+
+@app.route('/api/property-changes/<int:community_id>')
+def get_property_changes(community_id):
+    """获取社区中变化最大的房源TOP20"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    # 获取社区UUID
+    cursor.execute("SELECT uuid FROM community_cache WHERE id = %s", (community_id,))
+    community = cursor.fetchone()
+    if not community:
+        cursor.close()
+        conn.close()
+        return jsonify({'error': '社区不存在'}), 404
+    
+    community_uuid = community['uuid']
+    
+    # 获取当前房源
+    cursor.execute("""
+        SELECT id, property_uuid, community_id,
+               CAST(title AS CHAR) as title,
+               bedrooms, bathrooms, size, price, status,
+               lowest_price, highest_price,
+               DATE_FORMAT(created_time, '%%Y-%%m-%%d %%H:%%i:%%s') as created_time,
+               DATE_FORMAT(update_time, '%%Y-%%m-%%d %%H:%%i:%%s') as update_time
+        FROM property
+        WHERE community_id = %s
+    """, (community_id,))
+    properties = cursor.fetchall()
+    
+    # 获取归档数据
+    cursor.execute("""
+        SELECT CAST(title AS CHAR) as title, listing_price, status, archive_no
+        FROM property_archive
+        WHERE community_uuid = %s
+        ORDER BY archive_no ASC
+    """, (community_uuid,))
+    archives = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # 按title分组归档数据
+    from collections import defaultdict
+    title_archives = defaultdict(list)
+    for a in archives:
+        title_archives[a['title']].append(a)
+    
+    # 计算每个房源的变化指标
+    property_changes = []
+    for prop in properties:
+        title = prop['title']
+        archive_list = title_archives.get(title, [])
+        
+        # 统计状态变化次数
+        status_changes = 0
+        if len(archive_list) > 1:
+            for i in range(1, len(archive_list)):
+                if archive_list[i]['status'] != archive_list[i-1]['status']:
+                    status_changes += 1
+        
+        # 统计价格变化次数
+        price_changes = 0
+        if len(archive_list) > 1:
+            for i in range(1, len(archive_list)):
+                pa = archive_list[i]['listing_price']
+                pb = archive_list[i-1]['listing_price']
+                if pa is not None and pb is not None and pa != pb:
+                    price_changes += 1
+        
+        # 计算价格波动范围
+        max_price = prop['highest_price'] or prop['price'] or 0
+        min_price = prop['lowest_price'] or prop['price'] or 0
+        price_range = max_price - min_price
+        price_range_pct = round((price_range / max_price * 100), 1) if max_price > 0 else 0
+        
+        # 综合变化评分 (状态变化权重2 + 价格变化 + 价格范围贡献)
+        change_score = status_changes * 2 + price_changes
+        if price_range > 0:
+            change_score += round(price_range / 10000.0, 2)
+        
+        property_changes.append({
+            'title': title,
+            'property_uuid': prop['property_uuid'],
+            'community_id': prop['community_id'],
+            'bedrooms': prop['bedrooms'],
+            'bathrooms': prop['bathrooms'],
+            'size': prop['size'],
+            'price': prop['price'],
+            'status': prop['status'],
+            'lowest_price': prop['lowest_price'],
+            'highest_price': prop['highest_price'],
+            'status_changes': status_changes,
+            'price_changes': price_changes,
+            'price_range': price_range,
+            'price_range_pct': price_range_pct,
+            'archive_count': len(archive_list),
+            'change_score': round(change_score, 2)
+        })
+    
+    # 按综合评分降序排列，取TOP20
+    property_changes.sort(key=lambda x: x['change_score'], reverse=True)
+    
+    return jsonify(property_changes[:20])
+
+
 # ==================== 批量采集功能结束 ====================
 
 if __name__ == '__main__':

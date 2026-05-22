@@ -51,6 +51,7 @@
         <div class="tabs">
             <button class="tab-button active" onclick="openTab(event, 'logs-tab')">更新日志</button>
             <button class="tab-button" onclick="openTab(event, 'properties-tab')">房源信息</button>
+            <button class="tab-button" onclick="openTab(event, 'changes-tab')">变化排行</button>
         </div>
 
         <!-- 更新日志选项卡 -->
@@ -114,6 +115,13 @@
             </div>
         </div>
 
+        <!-- 变化排行选项卡 -->
+        <div id="changes-tab" class="tab-content">
+            <div id="changes-container">
+                <p class="hint">加载中...</p>
+            </div>
+        </div>
+
         {% else %}
         <p class="error">未找到该社区信息</p>
         {% endif %}
@@ -146,6 +154,10 @@
     </script>
 
     <script>
+        // 从社区数据中提取ID供全局使用
+        const communityData = JSON.parse(document.getElementById('community-data').textContent);
+        const communityId = communityData.id;
+
         function showNote(logId) {
             const noteScript = document.getElementById('note-data-' + logId);
             if (noteScript) {
@@ -340,12 +352,124 @@
             if (tabName === 'properties-tab' && !window.propertiesLoaded) {
                 loadProperties();
             }
+            
+            // 如果切换到变化排行选项卡，加载变化排行数据
+            if (tabName === 'changes-tab' && !window.changesLoaded) {
+                loadChanges();
+            }
+        }
+
+        // 跳转到房源走势图页面
+        function goToPropertyTrend(row) {
+            const propertyUuid = row.getAttribute('data-property-uuid');
+            const communityId = row.getAttribute('data-community-id');
+            if (propertyUuid && communityId) {
+                window.location.href = `/property-trend/${communityId}/${propertyUuid}`;
+            }
+        }
+
+        // 加载变化排行数据
+        function loadChanges() {
+            if (!communityId) return;
+
+            fetch(`/api/property-changes/${communityId}`)
+                .then(response => response.json())
+                .then(data => {
+                    window.changesLoaded = true;
+                    renderChanges(data);
+                })
+                .catch(error => {
+                    console.error('Error loading changes:', error);
+                    document.getElementById('changes-container').innerHTML =
+                        '<p class="error">加载变化排行数据失败</p>';
+                });
+        }
+
+        // 渲染变化排行
+        function renderChanges(properties) {
+            const container = document.getElementById('changes-container');
+
+            if (!properties || properties.length === 0) {
+                container.innerHTML = '<p class="hint">暂无历史数据，无法计算变化排行</p>';
+                return;
+            }
+
+            let html = `
+                <div class="changes-info">
+                    <p class="changes-subtitle">显示价格变化最大或状态变化最频繁的房源 TOP ${properties.length}</p>
+                </div>
+                <div class="properties-table-container">
+                    <table class="properties-table changes-table">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>房源标题</th>
+                                <th>当前价格</th>
+                                <th>价格波动</th>
+                                <th>价格变化次数</th>
+                                <th>状态变化次数</th>
+                                <th>采集次数</th>
+                                <th>综合评分</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            properties.forEach((property, index) => {
+                const statusClass = getPropertyStatusClass(property.status);
+                const statusText = getPropertyStatusText(property.status);
+                const priceRangeDisplay = property.price_range > 0 
+                    ? `$${(property.price_range).toLocaleString()} (${property.price_range_pct}%)` 
+                    : '-';
+
+                html += `
+                    <tr class="property-row property-clickable"
+                        data-property-uuid="${property.property_uuid || ''}"
+                        data-community-id="${property.community_id}"
+                        onclick="goToPropertyTrend(this)"
+                        title="点击查看房源走势图">
+                        <td class="rank-cell">
+                            <span class="rank-badge rank-${index < 3 ? 'top' + (index + 1) : 'normal'}">#${index + 1}</span>
+                        </td>
+                        <td class="property-title">
+                            ${property.title || '-'}
+                            <span class="trend-icon">📈</span>
+                        </td>
+                        <td class="price-cell">
+                            ${property.price ? '$' + property.price.toLocaleString() : '-'}
+                        </td>
+                        <td>
+                            <span class="price-range-cell">${priceRangeDisplay}</span>
+                        </td>
+                        <td>
+                            <span class="change-count ${property.price_changes > 0 ? 'has-changes' : ''}">${property.price_changes} 次</span>
+                        </td>
+                        <td>
+                            <span class="change-count ${property.status_changes > 0 ? 'has-changes' : ''}">${property.status_changes} 次</span>
+                        </td>
+                        <td>${property.archive_count} 次</td>
+                        <td>
+                            <span class="score-badge">${property.change_score}</span>
+                        </td>
+                        <td>
+                            <button class="trend-btn-small" onclick="event.stopPropagation(); window.location.href='/property-trend/${property.community_id}/${property.property_uuid || ''}'" title="查看趋势图">📈 趋势</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
         }
 
         // 加载房源数据
         function loadProperties() {
-            const communityData = JSON.parse(document.getElementById('community-data').textContent);
-            const communityId = communityData.id;
             if (!communityId) return;
 
             fetch(`/api/properties/${communityId}`)
@@ -386,6 +510,7 @@
                                 <th>状态</th>
                                 <th>创建时间</th>
                                 <th>更新时间</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -396,8 +521,12 @@
                 const statusText = getPropertyStatusText(property.status);
 
                 html += `
-                    <tr class="property-row" data-status="${property.status}">
-                        <td class="property-title">${property.title || '-'}</td>
+                    <tr class="property-row property-clickable" data-status="${property.status}"
+                        data-property-uuid="${property.property_uuid || ''}"
+                        data-community-id="${communityId}"
+                        onclick="goToPropertyTrend(this)"
+                        title="点击查看房源走势图">
+                        <td class="property-title">${property.title || '-'} <span class="trend-icon">📈</span></td>
                         <td>${property.bedrooms || '-'}</td>
                         <td>${property.bathrooms || '-'}</td>
                         <td>${property.size ? property.size.toLocaleString() + ' sq ft' : '-'}</td>
@@ -417,6 +546,9 @@
                         </td>
                         <td class="time-cell">${formatDate(property.created_time)}</td>
                         <td class="time-cell">${formatDate(property.update_time)}</td>
+                        <td>
+                            <button class="trend-btn-small" onclick="event.stopPropagation(); window.location.href='/property-trend/${communityId}/${property.property_uuid || ''}'" title="查看趋势图">📈 趋势</button>
+                        </td>
                     </tr>
                 `;
             });
