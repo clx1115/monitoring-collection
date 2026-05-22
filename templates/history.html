@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>采集历史 - {{ community.name if community else '未找到' }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        
+        {% if community %}
+        <div class="detail-header">
+            <h1>{{ community.name }} - 采集历史</h1>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>社区ID:</label>
+                    <span>{{ community.id }}</span>
+                </div>
+                <div class="info-item">
+                    <label>UUID:</label>
+                    <span>{{ community.uuid }}</span>
+                </div>
+                <div class="info-item">
+                    <label>地址:</label>
+                    <span>{{ community.address or '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <label>总采集次数:</label>
+                    <span>{{ community.archive_no or 0 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <h2>历史采集记录</h2>
+        {% if archives and archives|length > 0 %}
+        <div class="archive-stats">
+            <span>共 <strong>{{ archives|length }}</strong> 条历史记录</span>
+        </div>
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>采集次数</th>
+                    <th>采集时间</th>
+                    <th>社区名称</th>
+                    <th>价格区间</th>
+                    <th>面积区间</th>
+                    <th>卧室</th>
+                    <th>浴室</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for archive in archives %}
+                <tr>
+                    <td><span class="archive-no-text">{{ archive.archive_no }}</span></td>
+                    <td>{{ archive.archive_time or archive.created_at }}</td>
+                    <td>{{ archive.name }}</td>
+                    <td>
+                        {% if archive.price or archive.price_max %}
+                        <span class="price-range">
+                            {{ archive.price or '?' }} 
+                            {% if archive.price_max and archive.price_max != archive.price %}
+                            - {{ archive.price_max }}
+                            {% endif %}
+                        </span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if archive.size_min or archive.size_max %}
+                        <span class="size-range">
+                            {{ '{:,}'.format(archive.size_min) if archive.size_min else '?' }} 
+                            - 
+                            {{ '{:,}'.format(archive.size_max) if archive.size_max else '?' }} sqft
+                        </span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if archive.bedrooms or archive.bedrooms_max %}
+                        {{ archive.bedrooms or '?' }}
+                        {% if archive.bedrooms_max and archive.bedrooms_max != archive.bedrooms %}
+                        - {{ archive.bedrooms_max }}
+                        {% endif %}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if archive.bathrooms or archive.bathrooms_max %}
+                        {{ archive.bathrooms or '?' }}
+                        {% if archive.bathrooms_max and archive.bathrooms_max != archive.bathrooms %}
+                        - {{ archive.bathrooms_max }}
+                        {% endif %}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="view-detail-btn" onclick="viewArchiveDetail('{{ community.uuid }}', {{ archive.archive_no }})">
+                            <span class="btn-icon">&#128065;</span>
+                            <span class="btn-text">查看</span>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="hint">
+            <p>暂无历史采集记录</p>
+            <p style="color: #999; font-size: 14px; margin-top: 10px;">UUID: {{ community.uuid }}</p>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <p class="error">未找到该社区信息</p>
+        {% endif %}
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div id="detailModal" class="modal" onclick="closeDetailModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>采集详情</h3>
+                <span class="close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="detailContent">
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function viewArchiveDetail(uuid, archiveNo) {
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('detailContent');
+            
+            // 显示加载状态
+            content.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">加载中...</div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+            
+            try {
+                const response = await fetch(`/api/archive-detail/${uuid}/${archiveNo}`);
+                if (!response.ok) {
+                    throw new Error('加载失败');
+                }
+                const data = await response.json();
+                
+                // 渲染详情内容
+                content.innerHTML = renderArchiveDetail(data);
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="error">
+                        <h4>加载失败</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderArchiveDetail(data) {
+            let html = '';
+            
+            // 户型信息
+            if (data.floorplans && data.floorplans.length > 0) {
+                html += '<div class="detail-section"><h4>户型信息 <span class="count-num">(' + data.floorplans.length + ')</span></h4><table class="simple-table"><thead><tr><th>户型名称</th><th>类型</th><th>卧室</th><th>浴室</th><th>面积</th><th>价格</th></tr></thead><tbody>';
+                
+                data.floorplans.forEach(fp => {
+                    html += '<tr><td class="name-col">' + (fp.name || '-') + '</td><td>' + (fp.home_type || '-') + '</td><td>' + (fp.bedroom_num || '-') + '</td><td>' + (fp.bathroom_num || '-') + '</td><td>' + (fp.size ? fp.size.toLocaleString() + ' sqft' : '-') + '</td><td class="price-col">' + (fp.price ? '$' + fp.price.toLocaleString() : '-') + '</td></tr>';
+                });
+                
+                html += '</tbody></table></div>';
+            } else {
+                html += '<div class="detail-section"><p class="empty-hint">暂无户型信息</p></div>';
+            }
+            
+            // 房源信息
+            if (data.properties && data.properties.length > 0) {
+                html += '<div class="detail-section"><h4>房源信息 <span class="count-num">(' + data.properties.length + ')</span></h4><table class="simple-table"><thead><tr><th>标题</th><th>状态</th><th>卧室</th><th>浴室</th><th>面积</th><th>价格</th></tr></thead><tbody>';
+                
+                data.properties.forEach(prop => {
+                    const statusClass = getPropertyStatusClass(prop.status);
+                    html += '<tr><td class="name-col">' + (prop.title || '-') + '</td><td><span class="status-tag ' + statusClass + '">' + (prop.status || '-') + '</span></td><td>' + (prop.bedrooms || '-') + '</td><td>' + (prop.bathrooms || '-') + '</td><td>' + (prop.size ? prop.size.toLocaleString() + ' sqft' : '-') + '</td><td class="price-col">' + (prop.listing_price ? '$' + prop.listing_price.toLocaleString() : '-') + '</td></tr>';
+                });
+                
+                html += '</tbody></table></div>';
+            } else {
+                html += '<div class="detail-section"><p class="empty-hint">暂无房源信息</p></div>';
+            }
+            
+            return html;
+        }
+        
+        function getPropertyStatusClass(status) {
+            if (!status) return '';
+            const statusLower = status.toLowerCase().replace(/\s+/g, '-');
+            return `status-${statusLower}`;
+        }
+        
+        function closeDetailModal(event) {
+            if (!event || event.target.id === 'detailModal' || event.target.className === 'close') {
+                document.getElementById('detailModal').style.display = 'none';
+            }
+        }
+        
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeDetailModal();
+            }
+        });
+    </script>
+</body>
+</html>

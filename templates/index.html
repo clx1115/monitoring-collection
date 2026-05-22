@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>建商采集监控</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header class="page-header">
+            <div class="header-content">
+                <h1 class="page-title">
+                    <span class="title-icon">🏘️</span>
+                    <span class="title-text">建商采集监控</span>
+                </h1>
+                <div class="header-subtitle">实时监控社区数据变化</div>
+            </div>
+            <div class="header-actions">
+                <a href="/collection" class="collection-btn">
+                    <span class="btn-icon">🚀</span>
+                    <span class="btn-text">采集控制</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <select id="builder" onchange="loadCommunities()">
+                    <option value="">选择Builder</option>
+                    {% for builder in builders %}
+                    <option value="{{ builder.builder_id }}">{{ builder.builder_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <select id="update-status" onchange="loadCommunities()">
+                    <option value="">全部状态</option>
+                    <option value="1">有更新</option>
+                    <option value="0">无更新</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <input type="text" id="search-input" placeholder="搜索社区名称或地址..." onkeyup="handleSearch()">
+            </div>
+
+            <div class="filter-group">
+                <button onclick="clearAll()" class="clear-btn">清空</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading-container" style="display:none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">正在加载社区数据...</div>
+        </div>
+
+        <div id="communities-container">
+            <p class="hint">请选择筛选条件查看社区信息</p>
+        </div>
+    </div>
+
+    <script>
+        let searchTimeout;
+
+        async function loadCommunities() {
+            const builderId = document.getElementById('builder').value;
+            const updateStatus = document.getElementById('update-status').value;
+            const searchTerm = document.getElementById('search-input').value.trim();
+            const container = document.getElementById('communities-container');
+            const loading = document.getElementById('loading');
+
+            // 如果没有任何筛选条件
+            if (!builderId && !updateStatus && !searchTerm) {
+                container.innerHTML = '<p class="hint">请选择筛选条件查看社区信息</p>';
+                return;
+            }
+
+            loading.style.display = 'block';
+            container.innerHTML = '';
+
+            try {
+                const params = new URLSearchParams();
+                if (builderId) params.append('builder_id', builderId);
+                if (updateStatus !== '') params.append('update_status', updateStatus);
+                if (searchTerm) params.append('search', searchTerm);
+
+                const url = `/api/communities?${params.toString()}`;
+                const response = await fetch(url);
+                const communities = await response.json();
+
+                loading.style.display = 'none';
+
+                if (communities.length === 0) {
+                    container.innerHTML = '<p class="hint">未找到匹配的社区，请调整筛选条件</p>';
+                    return;
+                }
+
+                let html = '<div class="table-container"><table class="communities-table"><thead><tr><th class="col-id">ID</th><th class="col-name">社区信息</th><th class="col-status">更新状态</th><th class="col-count">更新次数</th><th class="col-time">创建时间</th><th class="col-time">更新时间</th><th class="col-action">操作</th></tr></thead><tbody>';
+
+                communities.forEach(comm => {
+                    const statusIcon = comm.update_status ? '🔄' : '⏸️';
+                    const statusText = comm.update_status ? '有更新' : '无更新';
+                    const statusClass = comm.update_status ? 'status-updated' : 'status-no-update';
+
+                    html += `<tr class="community-row">
+                        <td class="col-id">
+                            <span class="id-badge">${comm.id}</span>
+                        </td>
+                        <td class="col-name">
+                            <div class="community-info">
+                                <div class="community-name">${comm.name || '未知社区'}</div>
+                                <div class="community-address">${comm.address || '地址未知'}</div>
+                            </div>
+                        </td>
+                        <td class="col-status">
+                            <div class="status-container">
+                                <span class="status ${statusClass}">
+                                    <span class="status-icon">${statusIcon}</span>
+                                    <span class="status-text">${statusText}</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td class="col-count">
+                            <a href="/history/${comm.uuid}" class="count-link" target="_blank" rel="noopener noreferrer">
+                                <span class="count-badge">${comm.archive_no || 0}</span>
+                            </a>
+                        </td>
+                        <td class="col-time">
+                            <span class="time-text">${comm.created_time || '-'}</span>
+                        </td>
+                        <td class="col-time">
+                            <span class="time-text">${comm.update_time || '-'}</span>
+                        </td>
+                        <td class="col-action">
+                            <a href="/detail/${comm.id}" class="action-btn" target="_blank" rel="noopener noreferrer">
+                                <span class="btn-icon">📊</span>
+                                <span class="btn-text">查看日志</span>
+                            </a>
+                        </td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                loading.style.display = 'none';
+                container.innerHTML = '<p class="error">加载失败，请重试</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadCommunities();
+            }, 300);
+        }
+
+        function clearAll() {
+            document.getElementById('builder').value = '';
+            document.getElementById('update-status').value = '';
+            document.getElementById('search-input').value = '';
+            loadCommunities();
+        }
+
+
+    </script>
+</body>
+
+</html>

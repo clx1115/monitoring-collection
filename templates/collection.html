@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>采集控制中心</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .collection-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .collection-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            margin: -20px -20px 30px -20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .collection-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .collection-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .collection-subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .builders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        .builder-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .builder-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .builder-card-header {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .builder-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .builder-id {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .api-status.available {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+        }
+
+        .api-status.unavailable {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+        }
+
+        .update-time {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1565c0;
+        }
+
+        .header-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .builder-card-body {
+            padding: 20px;
+        }
+
+        .status-section {
+            margin-bottom: 20px;
+        }
+
+        .status-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .status-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #dee2e6;
+        }
+
+        .status-display.running {
+            background: linear-gradient(135deg, #d4edda, #ffffff);
+            border-left-color: #28a745;
+        }
+
+        .status-display.idle {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border-left-color: #6c757d;
+        }
+
+        .status-display.error {
+            background: linear-gradient(135deg, #f8d7da, #ffffff);
+            border-left-color: #dc3545;
+        }
+
+        .status-icon {
+            font-size: 16px;
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .controls-section {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: linear-gradient(135deg, #218838, #1e7e34);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: linear-gradient(135deg, #c82333, #bd2130);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-logs {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+        }
+
+        .btn-logs:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        .no-api-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #5a67d8;
+            transform: translateX(-3px);
+        }
+
+        .batch-control-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            border: 2px solid #e9ecef;
+        }
+
+        .batch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .batch-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .batch-start {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .batch-start:hover:not(:disabled) {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .batch-cancel {
+            background: linear-gradient(135deg, #ffc107, #f39c12);
+            color: #212529;
+            margin-left: 12px;
+        }
+
+        .batch-cancel:hover:not(:disabled) {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+        }
+
+        .batch-icon {
+            font-size: 20px;
+        }
+
+        .batch-progress {
+            margin-top: 16px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .progress-count {
+            font-size: 14px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        @media (max-width: 768px) {
+            .builders-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .collection-title {
+                font-size: 28px;
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .controls-section {
+                flex-direction: column;
+            }
+            
+            .control-btn {
+                justify-content: center;
+            }
+
+            .batch-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .batch-cancel {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="collection-container">
+        <a href="/" class="back-link">
+            <span>←</span>
+            <span>返回首页</span>
+        </a>
+
+        <header class="collection-header">
+            <h1 class="collection-title">
+                <span>🚀</span>
+                <span>采集控制中心</span>
+            </h1>
+            <div class="collection-subtitle">管理和监控所有建商的数据采集任务</div>
+        </header>
+
+        <div class="batch-control-panel">
+            <button class="batch-btn batch-start" id="batchStartBtn" onclick="startBatchCollection()">
+                <span class="batch-icon">⚡</span>
+                <span>一键采集全部</span>
+            </button>
+            <button class="batch-btn batch-cancel" id="batchCancelBtn" onclick="cancelBatchCollection()" style="display: none;">
+                <span class="batch-icon">⏸️</span>
+                <span>取消采集</span>
+            </button>
+            <div class="batch-progress" id="batchProgress" style="display: none;">
+                <div class="progress-info">
+                    <span class="progress-text" id="progressText">准备中...</span>
+                    <span class="progress-count" id="progressCount">0/0</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="builders-grid">
+            {% for builder in builders %}
+            <div class="builder-card">
+                <div class="builder-card-header">
+                    <h3 class="builder-name">
+                        <span>{{ builder.builder_name }}</span>
+                        <span class="builder-id">ID: {{ builder.builder_id }}</span>
+                    </h3>
+                    <div class="header-info-row">
+                        {% if builder.api_url %}
+                        <div class="api-status available">
+                            <span>✅</span>
+                            <span>API可用</span>
+                        </div>
+                        {% else %}
+                        <div class="api-status unavailable">
+                            <span>❌</span>
+                            <span>API未配置</span>
+                        </div>
+                        {% endif %}
+                        {% if builder.update_time %}
+                        <div class="update-time">
+                            <span>🕐</span>
+                            <span>{{ builder.update_time }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="builder-card-body">
+                    {% if builder.api_url %}
+                    <div class="status-section">
+                        <div class="status-label">运行状态</div>
+                        <div class="status-display" id="status-{{ builder.builder_id }}">
+                            <div class="loading-spinner"></div>
+                            <span class="status-text">检查中...</span>
+                        </div>
+                    </div>
+
+                    <div class="controls-section" id="controls-{{ builder.builder_id }}">
+                        <button class="control-btn btn-start" id="start-btn-{{ builder.builder_id }}" onclick="startCollection('{{ builder.builder_id }}', '{{ builder.api_url }}')">
+                            <span>▶️</span>
+                            <span>启动采集</span>
+                        </button>
+                        <button class="control-btn btn-stop" id="stop-btn-{{ builder.builder_id }}" onclick="stopCollection('{{ builder.builder_id }}', '{{ builder.api_url }}')" style="display: none;">
+                            <span>⏹️</span>
+                            <span>停止采集</span>
+                        </button>
+                        <a href="{{ builder.api_url }}" target="_blank" class="control-btn btn-logs">
+                            <span>📋</span>
+                            <span>查看日志</span>
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="no-api-message">
+                        该建商尚未配置API接口，无法进行采集控制
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时检查所有API状态
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for builder in builders %}
+            {% if builder.api_url %}
+            checkStatus('{{ builder.builder_id }}', '{{ builder.api_url }}');
+            {% endif %}
+            {% endfor %}
+        });
+
+        async function checkStatus(builderId, apiUrl) {
+            const statusElement = document.getElementById(`status-${builderId}`);
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/status`);
+                const data = await response.json();
+                
+                updateStatusDisplay(statusElement, data);
+            } catch (error) {
+                updateStatusDisplay(statusElement, {
+                    status: 'error',
+                    message: '无法连接到API服务'
+                });
+            }
+        }
+
+        function updateStatusDisplay(element, data) {
+            element.className = 'status-display';
+            
+            let icon, text, className;
+            
+            // 从element的id中提取builderId
+            const builderId = element.id.replace('status-', '');
+            const startBtn = document.getElementById(`start-btn-${builderId}`);
+            const stopBtn = document.getElementById(`stop-btn-${builderId}`);
+            
+            switch(data.status) {
+                case 'running':
+                    icon = '🔄';
+                    text = data.message || '任务运行中';
+                    className = 'running';
+                    // 显示停止按钮，隐藏启动按钮
+                    if (startBtn) startBtn.style.display = 'none';
+                    if (stopBtn) stopBtn.style.display = 'inline-flex';
+                    break;
+                case 'idle':
+                case 'completed':
+                    icon = '💤';
+                    text = data.message || '空闲状态';
+                    className = 'idle';
+                    // 显示启动按钮，隐藏停止按钮
+                    if (startBtn) startBtn.style.display = 'inline-flex';
+                    if (stopBtn) stopBtn.style.display = 'none';
+                    break;
+                case 'error':
+                default:
+                    icon = '❌';
+                    text = data.message || '连接失败';
+                    className = 'error';
+                    // 显示启动按钮，隐藏停止按钮
+                    if (startBtn) startBtn.style.display = 'inline-flex';
+                    if (stopBtn) stopBtn.style.display = 'none';
+                    break;
+            }
+            
+            element.classList.add(className);
+            element.innerHTML = `
+                <span class="status-icon">${icon}</span>
+                <span class="status-text">${text}</span>
+            `;
+        }
+
+        async function startCollection(builderId, apiUrl) {
+            const statusElement = document.getElementById(`status-${builderId}`);
+            
+            // 显示加载状态
+            statusElement.className = 'status-display';
+            statusElement.innerHTML = `
+                <div class="loading-spinner"></div>
+                <span class="status-text">启动中...</span>
+            `;
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/start`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                updateStatusDisplay(statusElement, data);
+                
+                if (data.status === 'success') {
+                    showNotification('采集任务启动成功', 'success');
+                    // 启动成功后，立即更新按钮状态为运行中
+                    updateStatusDisplay(statusElement, { status: 'running', message: '任务运行中' });
+                } else if (data.status === 'warning') {
+                    showNotification(data.message, 'warning');
+                } else {
+                    showNotification(data.message || '启动失败', 'error');
+                }
+            } catch (error) {
+                updateStatusDisplay(statusElement, {
+                    status: 'error',
+                    message: '启动失败：' + error.message
+                });
+                showNotification('启动失败：无法连接到API服务', 'error');
+            }
+        }
+
+        async function stopCollection(builderId, apiUrl) {
+            const statusElement = document.getElementById(`status-${builderId}`);
+            
+            // 显示加载状态
+            statusElement.className = 'status-display';
+            statusElement.innerHTML = `
+                <div class="loading-spinner"></div>
+                <span class="status-text">停止中...</span>
+            `;
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/stop`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                updateStatusDisplay(statusElement, data);
+                
+                if (data.status === 'success') {
+                    showNotification('采集任务已停止', 'success');
+                    // 停止成功后，立即更新按钮状态为空闲
+                    updateStatusDisplay(statusElement, { status: 'idle', message: '空闲状态' });
+                } else if (data.status === 'warning') {
+                    showNotification(data.message, 'warning');
+                } else {
+                    showNotification(data.message || '停止失败', 'error');
+                }
+            } catch (error) {
+                updateStatusDisplay(statusElement, {
+                    status: 'error',
+                    message: '停止失败：' + error.message
+                });
+                showNotification('停止失败：无法连接到API服务', 'error');
+            }
+        }
+
+        function showNotification(message, type) {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 24px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+                max-width: 400px;
+                word-wrap: break-word;
+            `;
+            
+            // 根据类型设置样式
+            switch(type) {
+                case 'success':
+                    notification.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                    break;
+                case 'warning':
+                    notification.style.background = 'linear-gradient(135deg, #ffc107, #f39c12)';
+                    notification.style.color = '#212529';
+                    break;
+                case 'error':
+                    notification.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+                    break;
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // 添加CSS动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 一键采集功能 - 后端实现版本
+        let statusCheckInterval = null;
+
+        async function startBatchCollection() {
+            try {
+                // 调用后端 API 启动批量采集
+                const response = await fetch('/api/batch-collection/start', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok || data.status !== 'success') {
+                    showNotification(data.message || '启动失败', 'error');
+                    return;
+                }
+                
+                // 更新UI
+                document.getElementById('batchStartBtn').style.display = 'none';
+                document.getElementById('batchCancelBtn').style.display = 'inline-flex';
+                document.getElementById('batchProgress').style.display = 'block';
+                
+                showNotification(data.message, 'success');
+                
+                // 开始轮询状态
+                startStatusPolling();
+                
+            } catch (error) {
+                showNotification('启动失败：' + error.message, 'error');
+            }
+        }
+
+        async function cancelBatchCollection() {
+            try {
+                const response = await fetch('/api/batch-collection/cancel', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    showNotification(data.message, 'warning');
+                } else {
+                    showNotification(data.message || '取消失败', 'error');
+                }
+                
+            } catch (error) {
+                showNotification('取消失败：' + error.message, 'error');
+            }
+        }
+
+        function startStatusPolling() {
+            // 清除之前的轮询
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+            
+            // 立即检查一次
+            checkBatchStatus();
+            
+            // 每2秒检查一次状态
+            statusCheckInterval = setInterval(checkBatchStatus, 2000);
+        }
+
+        async function checkBatchStatus() {
+            try {
+                const response = await fetch('/api/batch-collection/status');
+                const data = await response.json();
+                
+                console.log('批量采集状态:', data);
+                
+                // 更新进度显示
+                if (data.is_running) {
+                    // 如果是恢复的任务，显示UI
+                    if (data.recovered && document.getElementById('batchStartBtn').style.display !== 'none') {
+                        document.getElementById('batchStartBtn').style.display = 'none';
+                        document.getElementById('batchCancelBtn').style.display = 'inline-flex';
+                        document.getElementById('batchProgress').style.display = 'block';
+                        showNotification('检测到未完成的批量采集任务，已自动恢复', 'success');
+                        startStatusPolling();
+                    }
+                    
+                    const current = data.current_index + 1;
+                    const total = data.total_count;
+                    const builderName = data.current_builder ? data.current_builder.name : '';
+                    
+                    // 如果是恢复的任务，在状态消息前加标识
+                    let statusMessage = data.status_message;
+                    if (data.recovered && !statusMessage.includes('恢复')) {
+                        statusMessage = '(已恢复) ' + statusMessage;
+                    }
+                    
+                    updateProgress(current, total, statusMessage);
+                    
+                    // 如果有当前建商信息，显示详细信息
+                    if (builderName) {
+                        console.log(`正在采集: ${builderName} (${current}/${total})`);
+                    }
+                } else {
+                    // 采集已结束
+                    stopStatusPolling();
+                    
+                    // 显示最终结果
+                    const completedCount = data.completed_count;
+                    const failedCount = data.failed_count;
+                    const total = data.total_count;
+                    
+                    if (data.is_cancelled) {
+                        showNotification('批量采集已取消', 'warning');
+                        updateProgress(completedCount + failedCount, total, '已取消');
+                    } else {
+                        showNotification(`批量采集完成！成功: ${completedCount}, 失败: ${failedCount}`, 'success');
+                        updateProgress(total, total, '全部完成');
+                    }
+                    
+                    // 显示失败的建商
+                    if (failedCount > 0) {
+                        console.log('失败的建商:', data.failed_builders);
+                        data.failed_builders.forEach(builder => {
+                            showNotification(`${builder.name} 失败: ${builder.error}`, 'error');
+                        });
+                    }
+                    
+                    // 3秒后重置UI
+                    setTimeout(() => {
+                        resetBatchUI();
+                    }, 3000);
+                }
+                
+            } catch (error) {
+                console.error('状态检查失败:', error);
+            }
+        }
+
+        function stopStatusPolling() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+        }
+
+        function updateProgress(current, total, text) {
+            const percentage = total > 0 ? (current / total) * 100 : 0;
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = text;
+            document.getElementById('progressCount').textContent = `${current}/${total}`;
+        }
+
+        function resetBatchUI() {
+            document.getElementById('batchStartBtn').style.display = 'inline-flex';
+            document.getElementById('batchCancelBtn').style.display = 'none';
+            document.getElementById('batchProgress').style.display = 'none';
+            stopStatusPolling();
+        }
+
+        // 页面加载时检查是否有恢复的批量采集任务
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/batch-collection/status');
+                const data = await response.json();
+                
+                if (data.is_running && data.recovered) {
+                    console.log('检测到恢复的批量采集任务');
+                    document.getElementById('batchStartBtn').style.display = 'none';
+                    document.getElementById('batchCancelBtn').style.display = 'inline-flex';
+                    document.getElementById('batchProgress').style.display = 'block';
+                    showNotification('检测到未完成的批量采集任务，已自动恢复', 'success');
+                    startStatusPolling();
+                }
+            } catch (error) {
+                console.error('检查恢复状态失败:', error);
+            }
+        });
+
+        // 页面卸载时停止轮询
+        window.addEventListener('beforeunload', () => {
+            stopStatusPolling();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社区详情 - {{ community.name if community else '未找到' }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+
+        {% if community %}
+        <div class="detail-header">
+            <h1>{{ community.name }}</h1>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>社区ID:</label>
+                    <span>{{ community.id }}</span>
+                </div>
+                <div class="info-item">
+                    <label>地址:</label>
+                    <span>{{ community.address or '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <label>状态:</label>
+                    <span class="status status-{{ community.update_status }}">{{ '有更新' if community.update_status else
+                        '无更新' }}</span>
+                </div>
+                <div class="info-item">
+                    <label>URL:</label>
+                    <span><a href="{{ community.url }}" target="_blank">{{ community.url }}</a></span>
+                </div>
+                <div class="info-item">
+                    <label>JSON URL:</label>
+                    <span><a href="{{ community.json_url }}" target="_blank">{{ community.json_url }}</a></span>
+                </div>
+                <div class="info-item">
+                    <label>创建时间:</label>
+                    <span>{{ community.created_time }}</span>
+                </div>
+                <div class="info-item">
+                    <label>更新时间:</label>
+                    <span>{{ community.update_time }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 选项卡导航 -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'logs-tab')">更新日志</button>
+            <button class="tab-button" onclick="openTab(event, 'properties-tab')">房源信息</button>
+        </div>
+
+        <!-- 更新日志选项卡 -->
+        <div id="logs-tab" class="tab-content active">
+            {% if logs %}
+            <div class="logs-table-container">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>更新时间</th>
+                            <th>户型数量</th>
+                            <th>房源总数</th>
+                            <th>在售</th>
+                            <th>即将推出</th>
+                            <th>已售</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr class="log-row">
+                            <td class="time-cell">{{ log.created_time }}</td>
+                            <td class="count-cell">{{ log.floorplan_count or 0 }}</td>
+                            <td class="count-cell">{{ log.property_count or 0 }}</td>
+                            <td class="badge-cell"><span class="log-badge badge-sale">{{ log.property_sale or 0
+                                    }}</span></td>
+                            <td class="badge-cell"><span class="log-badge badge-coming">{{ log.property_coming or 0
+                                    }}</span></td>
+                            <td class="badge-cell"><span class="log-badge badge-sold">{{ log.property_sold or 0
+                                    }}</span></td>
+                            <td class="note-cell">
+                                {% if log.note %}
+                                <button class="note-btn" onclick="showNote('{{ log.id }}')">查看详情</button>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="hint">暂无更新日志</p>
+            {% endif %}
+        </div>
+
+        <!-- 房源信息选项卡 -->
+        <div id="properties-tab" class="tab-content">
+            <div class="properties-filters">
+                <select id="statusFilter" onchange="filterProperties()">
+                    <option value="">全部状态</option>
+                    <option value="For Sale">在售</option>
+                    <option value="Coming Soon">即将推出</option>
+                    <option value="Sold">已售</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="搜索房源..." onkeyup="filterProperties()">
+            </div>
+            <div id="properties-container">
+                <p class="hint">加载中...</p>
+            </div>
+        </div>
+
+        {% else %}
+        <p class="error">未找到该社区信息</p>
+        {% endif %}
+    </div>
+
+    <!-- 备注弹窗 -->
+    <div id="noteModal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>更新详情</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="noteContent">
+            </div>
+        </div>
+    </div>
+
+    <!-- 将JSON数据存储在隐藏的script标签中 -->
+    {% for log in logs %}
+    {% if log.note %}
+    <script type="application/json" id="note-data-{{ log.id }}">{{ log.note|safe }}</script>
+    {% endif %}
+    {% endfor %}
+
+    <!-- 社区ID数据 -->
+    <script type="application/json" id="community-data">
+        {
+            "id": {% if community %}{{ community.id }}{% else %}null{% endif %}
+        }
+    </script>
+
+    <script>
+        function showNote(logId) {
+            const noteScript = document.getElementById('note-data-' + logId);
+            if (noteScript) {
+                try {
+                    const noteText = noteScript.textContent.trim();
+                    if (!noteText) {
+                        throw new Error('空的备注数据');
+                    }
+                    const noteData = JSON.parse(noteText);
+
+                    // 验证数据结构
+                    if (!noteData || typeof noteData !== 'object') {
+                        throw new Error('无效的数据格式');
+                    }
+
+                    const content = renderNoteContent(noteData);
+                    document.getElementById('noteContent').innerHTML = content;
+                    document.getElementById('noteModal').style.display = 'flex';
+                } catch (e) {
+                    console.error('Failed to parse note data:', e);
+                    console.error('Raw note text:', noteScript ? noteScript.textContent : 'No script element');
+
+                    // 显示原始数据作为fallback
+                    const rawText = noteScript ? noteScript.textContent : '无数据';
+                    document.getElementById('noteContent').innerHTML = `
+                        <div class="error">
+                            <h4>数据解析错误</h4>
+                            <p>错误信息: ${e.message}</p>
+                            <details>
+                                <summary>原始数据</summary>
+                                <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap;">${rawText}</pre>
+                            </details>
+                        </div>
+                    `;
+                    document.getElementById('noteModal').style.display = 'flex';
+                }
+            } else {
+                console.error('No note data found for log ID:', logId);
+                document.getElementById('noteContent').innerHTML = '<div class="error">未找到备注数据 (ID: ' + logId + ')</div>';
+                document.getElementById('noteModal').style.display = 'flex';
+            }
+        }
+
+        function renderNoteContent(noteData) {
+            let html = '';
+
+            // 导入时间和总体信息
+            html += `<div class="note-section">`;
+            html += `<div class="note-time">导入时间: ${noteData.import_time || '未知'}</div>`;
+            html += `<div class="note-status ${noteData.has_changes ? 'has-changes' : 'no-changes'}">`;
+            html += noteData.has_changes ? '✓ 有变化' : '○ 无变化';
+            html += `</div>`;
+            html += `</div>`;
+
+            if (noteData.summary && noteData.summary.total_changes > 0) {
+                html += `<div class="note-summary">总变化数量: <strong>${noteData.summary.total_changes}</strong></div>`;
+            }
+
+            // 户型变化
+            if (noteData.floorplans && noteData.floorplans.length > 0) {
+                html += `<div class="note-section">`;
+                html += `<h4>户型变化</h4>`;
+                html += `<div class="changes-list">`;
+
+                noteData.floorplans.forEach(floorplan => {
+                    const statusClass = getChangeStatusClass(floorplan.change_status);
+                    const statusText = getChangeStatusText(floorplan.change_status);
+                    html += `<div class="change-item ${statusClass}">`;
+                    html += `<span class="change-badge">${statusText}</span>`;
+                    html += `<span class="item-name">${floorplan.name}</span>`;
+                    html += `</div>`;
+                });
+
+                html += `</div>`;
+                html += `</div>`;
+            }
+
+            // 房源变化
+            if (noteData.properties && noteData.properties.length > 0) {
+                html += `<div class="note-section">`;
+                html += `<h4>房源变化</h4>`;
+                html += `<div class="changes-list">`;
+
+                noteData.properties.forEach(property => {
+                    const statusClass = getChangeStatusClass(property.change_status);
+                    const statusText = getChangeStatusText(property.change_status);
+                    html += `<div class="change-item ${statusClass}">`;
+                    html += `<div class="change-header">`;
+                    html += `<span class="change-badge">${statusText}</span>`;
+                    html += `<span class="item-name">${property.title}</span>`;
+                    html += `</div>`;
+                    if (property.change_description) {
+                        html += `<div class="change-description">${property.change_description}</div>`;
+                    }
+                    html += `<div class="property-info">`;
+                    html += `<span class="property-status status-${property.status.toLowerCase().replace(' ', '-')}">${getPropertyStatusText(property.status)}</span>`;
+                    if (property.price) {
+                        html += `<span class="property-price">$${property.price.toLocaleString()}</span>`;
+                    }
+                    html += `</div>`;
+                    html += `</div>`;
+                });
+
+                html += `</div>`;
+                html += `</div>`;
+            }
+
+            return html;
+        }
+
+        function getChangeStatusClass(status) {
+            const statusMap = {
+                'added': 'change-added',
+                'removed': 'change-removed',
+                'unchanged': 'change-unchanged',
+                'status_changed': 'change-modified',
+                'price_changed': 'change-modified',
+                'status_and_price_changed': 'change-modified'
+            };
+            return statusMap[status] || 'change-unknown';
+        }
+
+        function getChangeStatusText(status) {
+            const statusMap = {
+                'added': '新增',
+                'removed': '删除',
+                'unchanged': '无变化',
+                'status_changed': '状态变化',
+                'price_changed': '价格变化',
+                'status_and_price_changed': '状态价格变化'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getPropertyStatusText(status) {
+            const statusMap = {
+                'For Sale': '在售',
+                'Coming Soon': '即将推出',
+                'Sold': '已售'
+            };
+            return statusMap[status] || status;
+        }
+
+        function closeModal(event) {
+            if (!event || event.target.id === 'noteModal' || event.target.className === 'close') {
+                document.getElementById('noteModal').style.display = 'none';
+            }
+        }
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // 关闭窗口功能
+        function closeWindow() {
+            // 尝试关闭窗口
+            if (window.opener) {
+                // 如果是通过另一个窗口打开的，可以关闭
+                window.close();
+            } else {
+                // 如果不能关闭，提示用户或返回首页
+                if (confirm('无法自动关闭窗口，是否返回首页？')) {
+                    window.location.href = '/';
+                }
+            }
+        }
+
+        // 选项卡切换功能
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+
+            // 隐藏所有选项卡内容
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+
+            // 移除所有选项卡按钮的active类
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+
+            // 显示当前选项卡内容并添加active类到按钮
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+
+            // 如果切换到房源信息选项卡，加载房源数据
+            if (tabName === 'properties-tab' && !window.propertiesLoaded) {
+                loadProperties();
+            }
+        }
+
+        // 加载房源数据
+        function loadProperties() {
+            const communityData = JSON.parse(document.getElementById('community-data').textContent);
+            const communityId = communityData.id;
+            if (!communityId) return;
+
+            fetch(`/api/properties/${communityId}`)
+                .then(response => response.json())
+                .then(data => {
+                    window.allProperties = data;
+                    window.propertiesLoaded = true;
+                    renderProperties(data);
+                })
+                .catch(error => {
+                    console.error('Error loading properties:', error);
+                    document.getElementById('properties-container').innerHTML =
+                        '<p class="error">加载房源数据失败</p>';
+                });
+        }
+
+        // 渲染房源列表
+        function renderProperties(properties) {
+            const container = document.getElementById('properties-container');
+
+            if (!properties || properties.length === 0) {
+                container.innerHTML = '<p class="hint">暂无房源数据</p>';
+                return;
+            }
+
+            let html = `
+                <div class="properties-table-container">
+                    <table class="properties-table">
+                        <thead>
+                            <tr>
+                                <th>房源标题</th>
+                                <th>卧室</th>
+                                <th>浴室</th>
+                                <th>面积</th>
+                                <th>当前价格</th>
+                                <th>最低价格</th>
+                                <th>最高价格</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>更新时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            properties.forEach(property => {
+                const statusClass = getPropertyStatusClass(property.status);
+                const statusText = getPropertyStatusText(property.status);
+
+                html += `
+                    <tr class="property-row" data-status="${property.status}">
+                        <td class="property-title">${property.title || '-'}</td>
+                        <td>${property.bedrooms || '-'}</td>
+                        <td>${property.bathrooms || '-'}</td>
+                        <td>${property.size ? property.size.toLocaleString() + ' sq ft' : '-'}</td>
+                        <td class="price-cell">
+                            ${property.price ? '$' + property.price.toLocaleString() : '-'}
+                        </td>
+                        <td class="price-cell">
+                            ${property.lowest_price ? '$' + property.lowest_price.toLocaleString() : '-'}
+                            ${property.lowest_price_time ? '<br><small class="price-time">' + formatDate(property.lowest_price_time) + '</small>' : ''}
+                        </td>
+                        <td class="price-cell">
+                            ${property.highest_price ? '$' + property.highest_price.toLocaleString() : '-'}
+                            ${property.highest_price_time ? '<br><small class="price-time">' + formatDate(property.highest_price_time) + '</small>' : ''}
+                        </td>
+                        <td>
+                            <span class="property-status ${statusClass}">${statusText}</span>
+                        </td>
+                        <td class="time-cell">${formatDate(property.created_time)}</td>
+                        <td class="time-cell">${formatDate(property.update_time)}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // 筛选房源
+        function filterProperties() {
+            if (!window.allProperties) return;
+
+            const statusFilter = document.getElementById('statusFilter').value;
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+
+            let filteredProperties = window.allProperties;
+
+            // 按状态筛选
+            if (statusFilter) {
+                filteredProperties = filteredProperties.filter(p => p.status === statusFilter);
+            }
+
+            // 按搜索文本筛选
+            if (searchText) {
+                filteredProperties = filteredProperties.filter(p =>
+                    (p.title && p.title.toLowerCase().includes(searchText)) ||
+                    (p.bedrooms && p.bedrooms.toString().includes(searchText)) ||
+                    (p.bathrooms && p.bathrooms.toString().includes(searchText)) ||
+                    (p.size && p.size.toString().includes(searchText)) ||
+                    (p.price && p.price.toString().includes(searchText))
+                );
+            }
+
+            renderProperties(filteredProperties);
+        }
+
+        // 获取房源状态样式类
+        function getPropertyStatusClass(status) {
+            const statusMap = {
+                'For Sale': 'status-sale',
+                'Coming Soon': 'status-coming',
+                'Sold': 'status-sold'
+            };
+            return statusMap[status] || 'status-unknown';
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+
+    </script>
+</body>
+
+</html>
