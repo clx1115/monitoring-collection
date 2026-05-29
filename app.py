@@ -865,9 +865,9 @@ def get_property_history(community_id, property_uuid):
         FROM property_archive pa
         LEFT JOIN community_archive ca 
             ON ca.uuid = pa.community_uuid AND ca.archive_no = pa.archive_no
-        WHERE pa.community_uuid = %s AND pa.title = %s
+        WHERE pa.community_uuid = %s AND pa.uuid = %s
         ORDER BY pa.archive_no ASC
-    """, (community_uuid, property_title))
+    """, (community_uuid, property_uuid))
     history = cursor.fetchall()
     
     # 获取社区采集时间轴
@@ -1002,7 +1002,459 @@ def get_property_changes(community_id):
     return jsonify(property_changes[:20])
 
 
+# ==================== 统计模块 ====================
+
+@app.route('/stats')
+def stats():
+    """统计页面"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    # 获取所有builder用于筛选下拉框
+    cursor.execute("SELECT builder_id, builder_name FROM builder ORDER BY builder_name")
+    builders = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('stats.html', builders=builders)
+
+
+@app.route('/property-stats/<int:community_id>')
+def property_stats(community_id):
+    """房源统计页面"""
+    community_name = request.args.get('name', '未知社区')
+    community_uuid = request.args.get('uuid', '')
+    
+    return render_template('property_stats.html', 
+                         community_id=community_id,
+                         community_name=community_name,
+                         community_uuid=community_uuid)
+
+
+@app.route('/api/stats/communities')
+def get_stats_communities():
+    """获取社区列表（带分页和过滤）"""
+    # 获取查询参数
+    builder_id = request.args.get('builder_id', '').strip()
+    keyword = request.args.get('keyword', '').strip()
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('page_size', 20, type=int)
+    
+    # 限制每页条数
+    if page_size not in [10, 20, 50, 100]:
+        page_size = 20
+    if page < 1:
+        page = 1
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    # 构建查询条件
+    conditions = []
+    params = []
+    
+    if builder_id:
+        conditions.append("cc.builder = %s")
+        params.append(int(builder_id))
+    
+    if keyword:
+        conditions.append("(cc.name LIKE %s OR cc.address LIKE %s)")
+        params.extend([f'%{keyword}%', f'%{keyword}%'])
+    
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    
+    # 查询总数
+    count_query = f"""
+        SELECT COUNT(*) as total
+        FROM community_cache cc
+        WHERE {where_clause}
+    """
+    cursor.execute(count_query, params)
+    total = cursor.fetchone()['total']
+    
+    # 计算分页
+    offset = (page - 1) * page_size
+    total_pages = (total + page_size - 1) // page_size
+    
+    # 查询数据（关联builder表获取建商名称）
+    data_query = f"""
+        SELECT cc.id, cc.name, cc.address, cc.url, cc.json_url, 
+               cc.status, cc.uuid, cc.archive_no,
+               DATE_FORMAT(cc.created_time, '%%Y-%%m-%%d %%H:%%i') as created_time,
+               DATE_FORMAT(cc.update_time, '%%Y-%%m-%%d %%H:%%i') as update_time,
+               b.builder_name
+        FROM community_cache cc
+        LEFT JOIN builder b ON cc.builder = b.builder_id
+        WHERE {where_clause}
+        ORDER BY cc.update_time DESC
+        LIMIT %s OFFSET %s
+    """
+    cursor.execute(data_query, params + [page_size, offset])
+    communities = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'data': communities,
+        'pagination': {
+            'page': page,
+            'page_size': page_size,
+            'total': total,
+            'total_pages': total_pages
+        }
+    })
+
+
+@app.route('/api/stats/archive/<uuid>')
+def get_archive_stats(uuid):
+    """获取社区每轮采集的户型和房源数量统计"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    # 查询每轮采集的户型数量
+    cursor.execute("""
+        SELECT archive_no, 
+               COUNT(*) as floorplan_count,
+               DATE_FORMAT(MIN(archive_time), '%%Y-%%m-%%d %%H:%%i') as archive_time
+        FROM floorplan_archive 
+        WHERE community_uuid = %s
+        GROUP BY archive_no
+        ORDER BY archive_no ASC
+    """, (uuid,))
+    floorplan_stats = cursor.fetchall()
+    
+    # 查询每轮采集的房源数量
+    cursor.execute("""
+        SELECT archive_no, 
+               COUNT(*) as property_count
+        FROM property_archive 
+        WHERE community_uuid = %s
+        GROUP BY archive_no
+        ORDER BY archive_no ASC
+    """, (uuid,))
+    property_stats = cursor.fetchall()
+    
+    # 获取社区的采集时间
+    cursor.execute("""
+        SELECT archive_no,
+               DATE_FORMAT(archive_time, '%%Y-%%m-%%d %%H:%%i') as archive_time
+        FROM community_archive
+        WHERE uuid = %s
+        ORDER BY archive_no ASC
+    """, (uuid,))
+    community_archives = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # 合并数据
+    archive_time_map = {item['archive_no']: item['archive_time'] for item in community_archives}
+    floorplan_map = {item['archive_no']: item['floorplan_count'] for item in floorplan_stats}
+    property_map = {item['archive_no']: item['property_count'] for item in property_stats}
+    
+    # 获取所有轮次
+    all_archive_nos = sorted(set(
+        list(floorplan_map.keys()) + 
+        list(property_map.keys()) + 
+        list(archive_time_map.keys())
+    ))
+    
+    result = []
+    for archive_no in all_archive_nos:
+        result.append({
+            'archive_no': archive_no,
+            'archive_time': archive_time_map.get(archive_no, '-'),
+            'floorplan_count': floorplan_map.get(archive_no, 0),
+            'property_count': property_map.get(archive_no, 0)
+        })
+    
+    return jsonify(result)
+
+
+@app.route('/api/stats/price-trend/<uuid>')
+def get_price_trend(uuid):
+    """获取社区价格趋势数据"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    # 查询每轮采集的价格统计
+    cursor.execute("""
+        SELECT archive_no,
+               COUNT(*) as property_count,
+               MIN(listing_price) as min_price,
+               MAX(listing_price) as max_price,
+               AVG(listing_price) as avg_price,
+               SUM(CASE WHEN status = 'For Sale' THEN 1 ELSE 0 END) as for_sale_count,
+               SUM(CASE WHEN status = 'Coming Soon' THEN 1 ELSE 0 END) as coming_soon_count,
+               SUM(CASE WHEN status = 'Sold' THEN 1 ELSE 0 END) as sold_count
+        FROM property_archive 
+        WHERE community_uuid = %s AND listing_price IS NOT NULL AND listing_price > 0
+        GROUP BY archive_no
+        ORDER BY archive_no ASC
+    """, (uuid,))
+    price_stats = cursor.fetchall()
+    
+    # 获取社区的采集时间
+    cursor.execute("""
+        SELECT archive_no,
+               DATE_FORMAT(archive_time, '%%Y-%%m-%%d %%H:%%i') as archive_time
+        FROM community_archive
+        WHERE uuid = %s
+        ORDER BY archive_no ASC
+    """, (uuid,))
+    community_archives = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # 合并数据
+    archive_time_map = {item['archive_no']: item['archive_time'] for item in community_archives}
+    
+    result = []
+    for item in price_stats:
+        archive_no = item['archive_no']
+        result.append({
+            'archive_no': archive_no,
+            'archive_time': archive_time_map.get(archive_no, '-'),
+            'property_count': item['property_count'],
+            'min_price': round(item['min_price']) if item['min_price'] else 0,
+            'max_price': round(item['max_price']) if item['max_price'] else 0,
+            'avg_price': round(item['avg_price']) if item['avg_price'] else 0,
+            'for_sale_count': item['for_sale_count'] or 0,
+            'coming_soon_count': item['coming_soon_count'] or 0,
+            'sold_count': item['sold_count'] or 0
+        })
+    
+    return jsonify(result)
+
+
 # ==================== 批量采集功能结束 ====================
+
+
+# ==================== 数据智能洞察 API ====================
+
+@app.route('/api/insights/price-drops')
+def get_insight_price_drops():
+    """获取近期降价幅度最大的房源 Top 10"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    community_id = request.args.get('community_id', '').strip()
+    if community_id:
+        cursor.execute("""
+            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+                   p.community_id, p.bedrooms, p.bathrooms, p.size,
+                   p.price as current_price, p.highest_price,
+                   (p.highest_price - p.price) as drop_amount,
+                   ROUND((p.highest_price - p.price) / p.highest_price * 100, 1) as drop_pct,
+                   p.status,
+                   DATE_FORMAT(p.update_time, '%%Y-%%m-%%d %%H:%%i') as update_time,
+                   cc.name as community_name, cc.uuid as community_uuid,
+                   b.builder_name
+            FROM property p
+            JOIN community_cache cc ON p.community_id = cc.id
+            LEFT JOIN builder b ON cc.builder = b.builder_id
+            WHERE p.status != 'Sold'
+              AND p.price > 0
+              AND p.highest_price > p.price
+              AND p.community_id = %s
+            ORDER BY drop_amount DESC
+            LIMIT 10
+        """, (int(community_id),))
+    else:
+        cursor.execute("""
+            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+                   p.community_id, p.bedrooms, p.bathrooms, p.size,
+                   p.price as current_price, p.highest_price,
+                   (p.highest_price - p.price) as drop_amount,
+                   ROUND((p.highest_price - p.price) / p.highest_price * 100, 1) as drop_pct,
+                   p.status,
+                   DATE_FORMAT(p.update_time, '%%Y-%%m-%%d %%H:%%i') as update_time,
+                   cc.name as community_name, cc.uuid as community_uuid,
+                   b.builder_name
+            FROM property p
+            JOIN community_cache cc ON p.community_id = cc.id
+            LEFT JOIN builder b ON cc.builder = b.builder_id
+            WHERE p.status != 'Sold'
+              AND p.price > 0
+              AND p.highest_price > p.price
+            ORDER BY drop_amount DESC
+            LIMIT 10
+        """)
+    results = cursor.fetchall()
+
+    serializable = []
+    for row in results:
+        s = {}
+        for k, v in row.items():
+            if isinstance(v, bytes):
+                s[k] = v.decode('utf-8', errors='ignore')
+            else:
+                s[k] = v
+        serializable.append(s)
+
+    cursor.close()
+    conn.close()
+    return jsonify(serializable)
+
+
+@app.route('/api/insights/active-value')
+def get_insight_active_value():
+    """获取最受关注/状态频繁变更的高性价比户型 Top 10"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    community_id = request.args.get('community_id', '').strip()
+    if community_id:
+        cursor.execute("""
+            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+                   p.community_id, p.bedrooms, p.bathrooms, p.size,
+                   p.price, p.status,
+                   ROUND(p.price / p.size, 0) as price_per_sqft,
+                   p.lowest_price, p.highest_price,
+                   cc.name as community_name, cc.uuid as community_uuid,
+                   b.builder_name
+            FROM property p
+            JOIN community_cache cc ON p.community_id = cc.id
+            LEFT JOIN builder b ON cc.builder = b.builder_id
+            WHERE p.status != 'Sold'
+              AND p.price > 0
+              AND p.size > 0
+              AND p.community_id = %s
+            ORDER BY price_per_sqft ASC
+            LIMIT 50
+        """, (int(community_id),))
+    else:
+        cursor.execute("""
+            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+                   p.community_id, p.bedrooms, p.bathrooms, p.size,
+                   p.price, p.status,
+                   ROUND(p.price / p.size, 0) as price_per_sqft,
+                   p.lowest_price, p.highest_price,
+                   cc.name as community_name, cc.uuid as community_uuid,
+                   b.builder_name
+            FROM property p
+            JOIN community_cache cc ON p.community_id = cc.id
+            LEFT JOIN builder b ON cc.builder = b.builder_id
+            WHERE p.status != 'Sold'
+              AND p.price > 0
+              AND p.size > 0
+            ORDER BY price_per_sqft ASC
+            LIMIT 50
+        """)
+    candidates = cursor.fetchall()
+
+    # Step 2: For each candidate, count activity from property_archive
+    results = []
+    for prop in candidates:
+        cursor.execute("""
+            SELECT listing_price, status, archive_no
+            FROM property_archive
+            WHERE community_uuid = %s AND uuid = %s
+            ORDER BY archive_no ASC
+        """, (prop['community_uuid'], prop['property_uuid']))
+        archives = cursor.fetchall()
+
+        status_changes = 0
+        price_changes = 0
+        if len(archives) > 1:
+            for i in range(1, len(archives)):
+                if archives[i]['status'] != archives[i-1]['status']:
+                    status_changes += 1
+                pa = archives[i]['listing_price']
+                pb = archives[i-1]['listing_price']
+                if pa is not None and pb is not None and pa != pb:
+                    price_changes += 1
+
+        activity_count = status_changes + price_changes
+        if activity_count > 0:
+            row = {}
+            for k, v in prop.items():
+                if isinstance(v, bytes):
+                    row[k] = v.decode('utf-8', errors='ignore')
+                else:
+                    row[k] = v
+            row['status_changes'] = status_changes
+            row['price_changes'] = price_changes
+            row['activity_count'] = activity_count
+            row['archive_count'] = len(archives)
+            results.append(row)
+
+    results.sort(key=lambda x: (-x['activity_count'], x['price_per_sqft']))
+
+    cursor.close()
+    conn.close()
+    return jsonify(results[:10])
+
+
+@app.route('/api/insights/stagnant')
+def get_insight_stagnant():
+    """获取挂牌时间最长的滞销房源 Top 10"""
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    community_id = request.args.get('community_id', '').strip()
+    if community_id:
+        cursor.execute("""
+            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+                   p.community_id, p.bedrooms, p.bathrooms, p.size,
+                   p.price, p.status,
+                   p.lowest_price, p.highest_price,
+                   DATE_FORMAT(p.created_time, '%%Y-%%m-%%d %%H:%%i') as created_time,
+                   DATEDIFF(NOW(), p.created_time) as days_listed,
+                   cc.name as community_name, cc.uuid as community_uuid,
+                   b.builder_name
+            FROM property p
+            JOIN community_cache cc ON p.community_id = cc.id
+            LEFT JOIN builder b ON cc.builder = b.builder_id
+            WHERE p.status != 'Sold'
+              AND p.price > 0
+              AND p.title IS NOT NULL 
+              AND p.title != ''
+              AND p.community_id = %s
+            ORDER BY p.created_time ASC
+            LIMIT 10
+        """, (int(community_id),))
+    else:
+        cursor.execute("""
+            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+                   p.community_id, p.bedrooms, p.bathrooms, p.size,
+                   p.price, p.status,
+                   p.lowest_price, p.highest_price,
+                   DATE_FORMAT(p.created_time, '%%Y-%%m-%%d %%H:%%i') as created_time,
+                   DATEDIFF(NOW(), p.created_time) as days_listed,
+                   cc.name as community_name, cc.uuid as community_uuid,
+                   b.builder_name
+            FROM property p
+            JOIN community_cache cc ON p.community_id = cc.id
+            LEFT JOIN builder b ON cc.builder = b.builder_id
+            WHERE p.status != 'Sold'
+              AND p.price > 0
+              AND p.title IS NOT NULL 
+              AND p.title != ''
+            ORDER BY p.created_time ASC
+            LIMIT 10
+        """)
+    results = cursor.fetchall()
+
+    serializable = []
+    for row in results:
+        s = {}
+        for k, v in row.items():
+            if isinstance(v, bytes):
+                s[k] = v.decode('utf-8', errors='ignore')
+            else:
+                s[k] = v
+        serializable.append(s)
+
+    cursor.close()
+    conn.close()
+    return jsonify(serializable)
+
+# ==================== 数据智能洞察结束 ====================
+
 
 if __name__ == '__main__':
     # 应用启动时尝试恢复批量采集任务（已禁用，避免重复启动采集）

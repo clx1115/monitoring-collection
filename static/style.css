@@ -1210,6 +1210,30 @@ notes额外美化效果 */
     font-weight: 700;
 }
 
+.stats-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    margin-left: 12px;
+}
+
+.stats-btn:hover {
+    background: linear-gradient(135deg, #5a6fd6, #6a3f9e);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    text-decoration: none;
+    color: white;
+}
+
 /* 筛选区域简化样式 */
 
 .filter-bar {

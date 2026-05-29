@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房源统计 - {{ community_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .stats-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+        }
+        .stats-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .summary-item {
+            padding: 16px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .summary-item .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .summary-item .label {
+            font-size: 13px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-bar select, .filter-bar input {
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .filter-bar select:focus, .filter-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+        .property-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+            gap: 20px;
+        }
+        .property-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .property-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .property-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .property-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+            margin-right: 12px;
+        }
+        .property-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .status-for-sale {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-coming-soon {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-sold {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-unknown {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .property-info {
+            padding: 12px 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background: #fafbfc;
+        }
+        .info-cell {
+            text-align: center;
+        }
+        .info-cell .value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        .info-cell .label {
+            font-size: 11px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .price-highlight {
+            color: #667eea;
+        }
+        .property-chart {
+            padding: 16px 20px;
+            height: 250px;
+        }
+        .property-chart-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .property-link {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            background: #f8f9fa;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            border-top: 1px solid #f0f0f0;
+            transition: background 0.3s;
+        }
+        .property-link:hover {
+            background: #667eea;
+            color: white;
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 768px) {
+            .property-grid {
+                grid-template-columns: 1fr;
+            }
+            .stats-header {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stats-container">
+        <div class="stats-header">
+            <h1>🏠 {{ community_name }} - 房源统计</h1>
+            <a href="/stats" class="back-btn">← 返回统计页面</a>
+        </div>
+
+        <div class="summary-bar" id="summary-bar">
+            <div class="summary-item">
+                <div class="number" id="total-properties">-</div>
+                <div class="label">总房源数</div>
+            </div>
+            <div class="summary-item">
+                <div class="number" id="for-sale-count">-</div>
+                <div class="label">在售</div>
+            </div>
+            <div class="summary-item">
+                <div class="number" id="coming-soon-count">-</div>
+                <div class="label">即将推出</div>
+            </div>
+            <div class="summary-item">
+                <div class="number" id="sold-count">-</div>
+                <div class="label">已售</div>
+            </div>
+            <div class="summary-item">
+                <div class="number" id="avg-price">-</div>
+                <div class="label">平均价格</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <select id="status-filter">
+                <option value="">全部状态</option>
+                <option value="For Sale">在售</option>
+                <option value="Coming Soon">即将推出</option>
+                <option value="Sold">已售</option>
+            </select>
+            <select id="sort-by">
+                <option value="price-asc">价格从低到高</option>
+                <option value="price-desc">价格从高到低</option>
+                <option value="bedrooms">卧室数</option>
+                <option value="size">面积</option>
+            </select>
+            <button class="btn btn-primary" onclick="filterProperties()">筛选</button>
+            <button class="btn btn-secondary" onclick="resetFilter()">重置</button>
+        </div>
+
+        <div class="property-grid" id="property-grid">
+            <div class="empty-state">
+                <div class="icon">⏳</div>
+                <p>加载房源数据中...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        const communityId = {{ community_id }};
+        const communityUuid = '{{ community_uuid }}';
+        let allProperties = [];
+        let propertyCharts = {};
+
+        async function loadProperties() {
+            document.getElementById('loading-overlay').classList.add('active');
+            try {
+                const response = await fetch(`/api/properties/${communityId}`);
+                if (!response.ok) throw new Error('加载失败');
+                allProperties = await response.json();
+                
+                updateSummary(allProperties);
+                renderProperties(allProperties);
+                
+                await loadAllPropertyHistory();
+            } catch (error) {
+                console.error('加载房源失败:', error);
+                document.getElementById('property-grid').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">❌</div>
+                        <p>加载房源数据失败: ${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loading-overlay').classList.remove('active');
+            }
+        }
+
+        function updateSummary(properties) {
+            const total = properties.length;
+            const forSale = properties.filter(p => p.status === 'For Sale').length;
+            const comingSoon = properties.filter(p => p.status === 'Coming Soon').length;
+            const sold = properties.filter(p => p.status === 'Sold').length;
+            const prices = properties.filter(p => p.price > 0).map(p => p.price);
+            const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+
+            document.getElementById('total-properties').textContent = total;
+            document.getElementById('for-sale-count').textContent = forSale;
+            document.getElementById('coming-soon-count').textContent = comingSoon;
+            document.getElementById('sold-count').textContent = sold;
+            document.getElementById('avg-price').textContent = avgPrice > 0 ? '$' + avgPrice.toLocaleString() : '-';
+        }
+
+        function renderProperties(properties) {
+            const grid = document.getElementById('property-grid');
+            
+            if (!properties || properties.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>没有找到房源数据</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = properties.map((prop, index) => {
+                const statusClass = getStatusClass(prop.status);
+                const statusText = getStatusText(prop.status);
+                
+                return `
+                    <div class="property-card" id="property-${prop.property_uuid}">
+                        <div class="property-card-header">
+                            <div class="property-title">${prop.title || '未命名房源'}</div>
+                            <span class="property-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="property-info">
+                            <div class="info-cell">
+                                <div class="value">${prop.bedrooms || '-'}</div>
+                                <div class="label">卧室</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.bathrooms || '-'}</div>
+                                <div class="label">浴室</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.size ? prop.size.toLocaleString() : '-'}</div>
+                                <div class="label">面积(sqft)</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value price-highlight">${prop.price ? '$' + prop.price.toLocaleString() : '-'}</div>
+                                <div class="label">当前价格</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.lowest_price ? '$' + prop.lowest_price.toLocaleString() : '-'}</div>
+                                <div class="label">历史最低</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.highest_price ? '$' + prop.highest_price.toLocaleString() : '-'}</div>
+                                <div class="label">历史最高</div>
+                            </div>
+                        </div>
+                        <div class="property-chart">
+                            <div class="property-chart-title">📈 价格趋势</div>
+                            <canvas id="chart-${prop.property_uuid}"></canvas>
+                        </div>
+                        <a href="/property-trend/${communityId}/${prop.property_uuid}" class="property-link">
+                            查看详细走势 →
+                        </a>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'For Sale': return 'status-for-sale';
+                case 'Coming Soon': return 'status-coming-soon';
+                case 'Sold': return 'status-sold';
+                default: return 'status-unknown';
+            }
+        }
+
+        function getStatusText(status) {
+            switch(status) {
+                case 'For Sale': return '在售';
+                case 'Coming Soon': return '即将推出';
+                case 'Sold': return '已售';
+                default: return status || '未知';
+            }
+        }
+
+        async function loadAllPropertyHistory() {
+            const batchSize = 5;
+            for (let i = 0; i < allProperties.length; i += batchSize) {
+                const batch = allProperties.slice(i, i + batchSize);
+                await Promise.all(batch.map(prop => loadPropertyHistory(prop)));
+            }
+        }
+
+        async function loadPropertyHistory(prop) {
+            try {
+                const response = await fetch(`/api/property-history/${communityId}/${prop.property_uuid}`);
+                if (!response.ok) return;
+                const history = await response.json();
+                
+                if (history && history.length > 0) {
+                    renderPropertyChart(prop.property_uuid, history);
+                }
+            } catch (error) {
+                console.error(`加载房源 ${prop.property_uuid} 历史失败:`, error);
+            }
+        }
+
+        function renderPropertyChart(propertyUuid, history) {
+            const canvas = document.getElementById(`chart-${propertyUuid}`);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            if (propertyCharts[propertyUuid]) {
+                propertyCharts[propertyUuid].destroy();
+            }
+
+            const labels = history.map(h => h.archive_time || `第${h.archive_no}轮`);
+            const prices = history.map(h => h.listing_price || 0);
+
+            propertyCharts[propertyUuid] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '价格',
+                        data: prices,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return '$' + ctx.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(v) {
+                                    return '$' + (v / 1000).toFixed(0) + 'k';
+                                }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function filterProperties() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const sortBy = document.getElementById('sort-by').value;
+            
+            let filtered = [...allProperties];
+            
+            if (statusFilter) {
+                filtered = filtered.filter(p => p.status === statusFilter);
+            }
+            
+            filtered.sort((a, b) => {
+                switch(sortBy) {
+                    case 'price-asc':
+                        return (a.price || 0) - (b.price || 0);
+                    case 'price-desc':
+                        return (b.price || 0) - (a.price || 0);
+                    case 'bedrooms':
+                        return (b.bedrooms || 0) - (a.bedrooms || 0);
+                    case 'size':
+                        return (b.size || 0) - (a.size || 0);
+                    default:
+                        return 0;
+                }
+            });
+            
+            renderProperties(filtered);
+            
+            filtered.forEach(prop => {
+                const canvas = document.getElementById(`chart-${prop.property_uuid}`);
+                if (canvas && !propertyCharts[prop.property_uuid]) {
+                    loadPropertyHistory(prop);
+                }
+            });
+        }
+
+        function resetFilter() {
+            document.getElementById('status-filter').value = '';
+            document.getElementById('sort-by').value = 'price-asc';
+            renderProperties(allProperties);
+            loadAllPropertyHistory();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProperties();
+        });
+    </script>
+</body>
+</html>

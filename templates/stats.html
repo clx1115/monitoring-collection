@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社区统计</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+        }
+
+        .stats-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .summary-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 8px 0;
+        }
+
+        .summary-card .label {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .community-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #eef0f5;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .community-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            position: relative;
+        }
+
+        .card-header h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 50px;
+        }
+
+        .card-header .builder-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .archive-corner {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .community-card .card-body {
+            padding: 14px 20px;
+        }
+
+        .community-card .card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .community-card .card-info .info-item {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .community-card .card-info .info-item .icon {
+            flex-shrink: 0;
+            width: 16px;
+            text-align: center;
+        }
+
+        .community-card .card-info .info-item .text {
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-footer {
+            padding: 10px 16px;
+            background: #fafbfc;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            background: #fff;
+            color: #555;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .pagination-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .page-btn {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .page-btn:hover:not(.disabled):not(.active) {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+            grid-column: 1 / -1;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* 模态框样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 18px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .modal-close {
+            background: red;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 22px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            user-select: none;
+            line-height: 1;
+            position: relative;
+            z-index: 3000;
+        }
+
+        .modal-close:hover {
+            background: darkred;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 16px;
+        }
+
+        .modal-body {
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .stats-table th,
+        .stats-table td {
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stats-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .stats-table tr:hover {
+            background: #f8f9ff;
+        }
+
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .page-size-selector select {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .action-btn-sm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .action-btn-sm.btn-red:hover {
+            background: #e53e3e !important;
+            color: #fff !important;
+            border-color: #e53e3e !important;
+        }
+
+        .action-btn-sm.btn-green:hover {
+            background: #38a169 !important;
+            color: #fff !important;
+            border-color: #38a169 !important;
+        }
+
+        .action-btn-sm.btn-amber:hover {
+            background: #dd6b20 !important;
+            color: #fff !important;
+            border-color: #dd6b20 !important;
+        }
+
+        /* ===== Tab Navigation ===== */
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(102, 126, 234, 0.10);
+            border: 1px solid rgba(102, 126, 234, 0.12);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(.4, 0, .2, 1);
+            background: transparent;
+            color: #777;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            background: rgba(102, 126, 234, 0.06);
+            color: #555;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+            animation: fadeInTab 0.35s ease;
+        }
+
+        @keyframes fadeInTab {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== Insights Widgets ===== */
+        .insights-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .insight-panel {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+            overflow: hidden;
+            border: 1px solid #eef0f5;
+            transition: box-shadow 0.3s;
+        }
+
+        .insight-panel:hover {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+        }
+
+        .insight-header {
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+        }
+
+        .insight-header h3 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .insight-header.theme-red {
+            background: linear-gradient(135deg, #f5576c 0%, #ff6b6b 100%);
+        }
+
+        .insight-header.theme-green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .insight-header.theme-amber {
+            background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+        }
+
+        .insight-body {
+            padding: 0;
+        }
+
+        .insight-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .insight-table th {
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #f8f9fb;
+            border-bottom: 2px solid #eef0f5;
+            white-space: nowrap;
+        }
+
+        .insight-table td {
+            padding: 13px 14px;
+            font-size: 13px;
+            color: #444;
+            border-bottom: 1px solid #f2f3f5;
+            vertical-align: middle;
+        }
+
+        .insight-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .insight-table tr:hover td {
+            background: #f8f9ff;
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, #f5576c, #ff6b6b);
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+
+        .rank-default {
+            background: #b0b8c8;
+        }
+
+        .drop-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            background: rgba(245, 87, 108, 0.1);
+            color: #f5576c;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .activity-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .activity-bar .bar {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #11998e, #38ef7d);
+            min-width: 8px;
+            transition: width 0.5s;
+        }
+
+        .days-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .days-danger {
+            background: rgba(245, 87, 108, 0.1);
+            color: #f5576c;
+        }
+
+        .days-warning {
+            background: rgba(247, 151, 30, 0.1);
+            color: #e68a00;
+        }
+
+        .days-normal {
+            background: rgba(17, 153, 142, 0.1);
+            color: #11998e;
+        }
+
+        .detail-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .detail-link:hover {
+            text-decoration: underline;
+        }
+
+        .prop-title {
+            font-weight: 600;
+            color: #333;
+            display: block;
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .prop-sub {
+            font-size: 11px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .insight-loading {
+            text-align: center;
+            padding: 48px 20px;
+            color: #aaa;
+        }
+
+        .insight-loading .spinner-sm {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border: 3px solid #eee;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        .insight-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #bbb;
+            font-size: 14px;
+        }
+
+        .refresh-btn {
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stats-container">
+        <div class="stats-header">
+            <h1>📊 社区统计</h1>
+            <a href="/" class="back-btn">← 返回首页</a>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">📊 社区数据统计</button>
+            <button class="tab-btn" onclick="switchTab('insights')">🔍 房源数据统计</button>
+        </div>
+
+        <!-- Tab 1: Dashboard -->
+        <div class="tab-pane active" id="tab-dashboard">
+
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>建商：</label>
+                    <select id="builder-filter">
+                        <option value="">全部建商</option>
+                        {% for builder in builders %}
+                        <option value="{{ builder.builder_id }}">{{ builder.builder_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>关键字：</label>
+                    <input type="text" id="keyword-filter" placeholder="搜索社区名称或地址...">
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary" onclick="loadData(1)">查询</button>
+                    <button class="btn btn-secondary" onclick="resetFilters()">重置</button>
+                </div>
+            </div>
+
+            <div class="stats-summary" id="stats-summary">
+                <div class="summary-card">
+                    <div class="label">社区总数</div>
+                    <div class="number" id="total-count">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">当前页</div>
+                    <div class="number" id="current-page">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">总页数</div>
+                    <div class="number" id="total-pages">-</div>
+                </div>
+            </div>
+
+            <div class="page-size-selector" style="margin-bottom: 16px; justify-content: flex-end;">
+                <span>每页显示：</span>
+                <select id="page-size" onchange="loadData(1)">
+                    <option value="12">12条</option>
+                    <option value="24" selected>24条</option>
+                    <option value="48">48条</option>
+                    <option value="96">96条</option>
+                </select>
+            </div>
+
+            <div class="cards-container" id="cards-container">
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <p>请选择筛选条件并点击查询</p>
+                </div>
+            </div>
+
+            <div class="pagination-section" id="pagination-section" style="display: none;">
+                <div class="pagination-info" id="pagination-info">共 0 条记录</div>
+                <div class="pagination-controls" id="pagination-controls"></div>
+            </div>
+
+        </div><!-- /tab-dashboard -->
+
+        <!-- Tab 2: Insights -->
+        <div class="tab-pane" id="tab-insights">
+            <div class="insights-grid">
+
+                <!-- Widget 1: Price Drops -->
+                <div class="insight-panel">
+                    <div class="insight-header theme-red">
+                        <h3>📉 近期降价排行 Top 10</h3>
+                        <button class="refresh-btn" onclick="loadPriceDrops()">🔄 刷新</button>
+                    </div>
+                    <div class="insight-body" id="price-drops-body">
+                        <div class="insight-loading">
+                            <div class="spinner-sm"></div><br>加载中...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Widget 2: Active Value -->
+                <div class="insight-panel">
+                    <div class="insight-header theme-green">
+                        <h3>🔥 活跃高性价比 Top 10</h3>
+                        <button class="refresh-btn" onclick="loadActiveValue()">🔄 刷新</button>
+                    </div>
+                    <div class="insight-body" id="active-value-body">
+                        <div class="insight-loading">
+                            <div class="spinner-sm"></div><br>加载中...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Widget 3: Stagnant -->
+                <div class="insight-panel">
+                    <div class="insight-header theme-amber">
+                        <h3>⏰ 滞销房源预警 Top 10</h3>
+                        <button class="refresh-btn" onclick="loadStagnant()">🔄 刷新</button>
+                    </div>
+                    <div class="insight-body" id="stagnant-body">
+                        <div class="insight-loading">
+                            <div class="spinner-sm"></div><br>加载中...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div><!-- /tab-insights -->
+
+    </div><!-- /stats-container -->
+
+    <!-- 轮次统计模态框 -->
+    <div class="modal-overlay" id="archive-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="archive-modal-title">轮次统计</h2>
+                <div class="modal-close" id="close-archive-btn">X</div>
+            </div>
+            <div class="modal-body">
+                <div class="chart-container">
+                    <canvas id="archive-chart"></canvas>
+                </div>
+                <table class="stats-table" id="stats-table">
+                    <thead>
+                        <tr>
+                            <th>轮次</th>
+                            <th>采集时间</th>
+                            <th>户型数量</th>
+                            <th>房源数量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 独立的数据洞察模态框 -->
+    <div class="modal-overlay" id="insight-modal">
+        <div class="modal-content">
+            <div class="modal-header" id="insight-modal-header">
+                <h2 id="insight-modal-title">数据详情</h2>
+                <div class="modal-close" id="close-insight-btn">X</div>
+            </div>
+            <div class="modal-body" id="insight-modal-body">
+                <!-- 动态渲染，无页签，独立呈现 -->
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- 价格趋势模态框 -->
+    <div class="modal-overlay" id="price-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="price-modal-title">价格趋势</h2>
+                <div class="modal-close" id="close-price-btn">X</div>
+            </div>
+            <div class="modal-body">
+                <div class="chart-container">
+                    <canvas id="price-chart"></canvas>
+                </div>
+                <table class="stats-table" id="price-table">
+                    <thead>
+                        <tr>
+                            <th>轮次</th>
+                            <th>采集时间</th>
+                            <th>最低价</th>
+                            <th>平均价</th>
+                            <th>最高价</th>
+                            <th>在售</th>
+                            <th>待售</th>
+                            <th>已售</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 24;
+        let archiveChart = null;
+        let priceChart = null;
+
+        // 加载数据
+        async function loadData(page = 1) {
+            const builderId = document.getElementById('builder-filter').value;
+            const keyword = document.getElementById('keyword-filter').value.trim();
+            pageSize = parseInt(document.getElementById('page-size').value);
+            currentPage = page;
+
+            document.getElementById('loading-overlay').classList.add('active');
+
+            try {
+                const params = new URLSearchParams({
+                    page: page,
+                    page_size: pageSize
+                });
+
+                if (builderId) params.append('builder_id', builderId);
+                if (keyword) params.append('keyword', keyword);
+
+                const response = await fetch(`/api/stats/communities?${params.toString()}`);
+                const result = await response.json();
+
+                document.getElementById('total-count').textContent = result.pagination.total;
+                document.getElementById('current-page').textContent = result.pagination.page;
+                document.getElementById('total-pages').textContent = result.pagination.total_pages;
+
+                renderCards(result.data);
+                renderPagination(result.pagination);
+
+                document.getElementById('pagination-info').textContent =
+                    `共 ${result.pagination.total} 条记录，第 ${result.pagination.page}/${result.pagination.total_pages} 页`;
+
+                document.getElementById('pagination-section').style.display =
+                    result.pagination.total > 0 ? 'flex' : 'none';
+
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                alert('加载数据失败，请重试');
+            } finally {
+                document.getElementById('loading-overlay').classList.remove('active');
+            }
+        }
+
+        // 渲染卡片
+        function renderCards(data) {
+            const container = document.getElementById('cards-container');
+
+            if (!data || data.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>没有找到匹配的数据</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = data.map(item => {
+                const safeName = (item.name || '未知社区').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+                return `
+                    <div class="community-card">
+                        <div class="card-header">
+                            <h3 title="${safeName}">${safeName}</h3>
+                            <span class="builder-tag">${item.builder_name || '未知建商'}</span>
+                            <div class="archive-corner" title="采集 ${item.archive_no || 0} 次">${item.archive_no || 0}</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-info">
+                                <div class="info-item">
+                                    <span class="icon">📍</span>
+                                    <span class="text" title="${item.address || '地址未知'}">${item.address || '地址未知'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="icon">🕐</span>
+                                    <span class="text">创建: ${item.created_time || '-'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="icon">🔄</span>
+                                    <span class="text">更新: ${item.update_time || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-actions" style="margin-bottom: 8px;">
+                                <button class="action-btn" data-id="${item.id}" data-uuid="${item.uuid}" data-name="${safeName}" onclick="showArchiveStats(this.dataset.id, this.dataset.uuid, this.dataset.name)">
+                                    📊 轮次统计
+                                </button>
+                                <button class="action-btn" data-uuid="${item.uuid}" data-name="${safeName}" onclick="showPriceTrend(this.dataset.uuid, this.dataset.name)">
+                                    💰 价格趋势
+                                </button>
+                                <a class="action-btn" href="/property-stats/${item.id}?name=${encodeURIComponent(item.name || '未知社区')}&uuid=${item.uuid}">
+                                    🏠 房源统计
+                                </a>
+                            </div>
+                            <div class="card-actions-sub" style="display: flex; gap: 6px; justify-content: center; border-top: 1px dashed #eee; padding-top: 8px;">
+                                <button class="action-btn-sm btn-red" data-id="${item.id}" data-name="${safeName}" onclick="showInsightModal(this.dataset.id, this.dataset.name, 'price-drops')" style="padding: 4px 8px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid #ffd8d8; background: #fff5f5; color: #e53e3e; cursor: pointer; transition: all 0.2s;">
+                                    📉 降价排行
+                                </button>
+                                <button class="action-btn-sm btn-green" data-id="${item.id}" data-name="${safeName}" onclick="showInsightModal(this.dataset.id, this.dataset.name, 'active-value')" style="padding: 4px 8px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid #c6f6d5; background: #f0fff4; color: #38a169; cursor: pointer; transition: all 0.2s;">
+                                    🔥 性价比
+                                </button>
+                                <button class="action-btn-sm btn-amber" data-id="${item.id}" data-name="${safeName}" onclick="showInsightModal(this.dataset.id, this.dataset.name, 'stagnant')" style="padding: 4px 8px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid #feebc8; background: #fffaf0; color: #dd6b20; cursor: pointer; transition: all 0.2s;">
+                                    ⏰ 滞销预警
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 显示采集统计
+        async function showArchiveStats(communityId, uuid, name) {
+            console.log('showArchiveStats called', communityId, uuid, name);
+            if (!uuid) {
+                alert('该社区暂无采集数据');
+                return;
+            }
+
+            document.getElementById('loading-overlay').classList.add('active');
+
+            try {
+                console.log('fetching archive stats for', uuid);
+                const response = await fetch(`/api/stats/archive/${uuid}`);
+                console.log('response status', response.status);
+                const result = await response.json();
+                console.log('archive data received', result);
+
+                document.getElementById('archive-modal-title').textContent = `${name} - 轮次统计`;
+
+                renderChart(result);
+                renderStatsTable(result);
+
+
+                console.log('showing archive modal');
+                document.getElementById('archive-modal').classList.add('active');
+
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+                alert('加载统计数据失败，请重试');
+            } finally {
+                document.getElementById('loading-overlay').classList.remove('active');
+            }
+        }
+
+        // 显示专属数据洞察模态框
+        async function showInsightModal(communityId, name, type) {
+            console.log('showInsightModal called', communityId, name, type);
+            const overlay = document.getElementById('insight-modal');
+            const titleEl = document.getElementById('insight-modal-title');
+            const headerEl = document.getElementById('insight-modal-header');
+            const bodyEl = document.getElementById('insight-modal-body');
+
+            // 1. 根据类型定制专属的弹窗标题与主题颜色
+            let titleText = '';
+            let headerStyle = '';
+            if (type === 'price-drops') {
+                titleText = `${name} - 降价排行`;
+                headerStyle = 'linear-gradient(135deg, #f5576c 0%, #ff6b6b 100%)';
+            } else if (type === 'active-value') {
+                titleText = `${name} - 性价比`;
+                headerStyle = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+            } else if (type === 'stagnant') {
+                titleText = `${name} - 滞销预警`;
+                headerStyle = 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)';
+            }
+
+            titleEl.textContent = titleText;
+            headerEl.style.background = headerStyle;
+
+            // 2. 显示加载状态
+            bodyEl.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
+            overlay.classList.add('active');
+
+            // 3. 异步获取并渲染对应的数据表格
+            try {
+                if (type === 'price-drops') {
+                    const res = await fetch(`/api/insights/price-drops?community_id=${communityId}`);
+                    const data = await res.json();
+                    if (!data.length) {
+                        bodyEl.innerHTML = '<div class="insight-empty" style="padding: 60px 0;">暂无降价数据</div>';
+                        return;
+                    }
+                    let html = '<div class="insight-panel" style="box-shadow:none; border:none; margin:0;"><div class="insight-body" style="padding:0;"><table class="insight-table"><thead><tr>';
+                    html += '<th>#</th><th>房源</th><th>当前价格</th><th>降价额</th><th>降幅</th><th>操作</th>';
+                    html += '</tr></thead><tbody>';
+                    data.forEach((d, i) => {
+                        html += `<tr>
+                            <td>${rankBadge(i)}</td>
+                            <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                                <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                            <td>$${(d.current_price || 0).toLocaleString()}</td>
+                            <td style="color:#f5576c;font-weight:700">-$${(d.drop_amount || 0).toLocaleString()}</td>
+                            <td><span class="drop-tag">-${d.drop_pct || 0}%</span></td>
+                            <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table></div></div>';
+                    bodyEl.innerHTML = html;
+
+                } else if (type === 'active-value') {
+                    const res = await fetch(`/api/insights/active-value?community_id=${communityId}`);
+                    const data = await res.json();
+                    if (!data.length) {
+                        bodyEl.innerHTML = '<div class="insight-empty" style="padding: 60px 0;">暂无活跃数据</div>';
+                        return;
+                    }
+                    const maxAct = Math.max(...data.map(d => d.activity_count));
+                    let html = '<div class="insight-panel" style="box-shadow:none; border:none; margin:0;"><div class="insight-body" style="padding:0;"><table class="insight-table"><thead><tr>';
+                    html += '<th>#</th><th>房源</th><th>当前价格</th><th>单呎价</th><th>变动次数</th><th>操作</th>';
+                    html += '</tr></thead><tbody>';
+                    data.forEach((d, i) => {
+                        const barW = Math.max(12, Math.round(d.activity_count / maxAct * 80));
+                        html += `<tr>
+                            <td>${rankBadge(i)}</td>
+                            <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                                <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                            <td>$${(d.price || 0).toLocaleString()}</td>
+                            <td style="font-weight:600;color:#11998e">$${(d.price_per_sqft || 0).toLocaleString()}/sqft</td>
+                            <td><div class="activity-bar"><div class="bar" style="width:${barW}px"></div><span style="font-weight:600">${d.activity_count}</span></div>
+                                <div class="prop-sub">价格${d.price_changes}次 状态${d.status_changes}次</div></td>
+                            <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table></div></div>';
+                    bodyEl.innerHTML = html;
+
+                } else if (type === 'stagnant') {
+                    const res = await fetch(`/api/insights/stagnant?community_id=${communityId}`);
+                    const data = await res.json();
+                    if (!data.length) {
+                        bodyEl.innerHTML = '<div class="insight-empty" style="padding: 60px 0;">暂无滞销数据</div>';
+                        return;
+                    }
+                    let html = '<div class="insight-panel" style="box-shadow:none; border:none; margin:0;"><div class="insight-body" style="padding:0;"><table class="insight-table"><thead><tr>';
+                    html += '<th>#</th><th>房源</th><th>当前价格</th><th>已挂牌</th><th>操作</th>';
+                    html += '</tr></thead><tbody>';
+                    data.forEach((d, i) => {
+                        const days = d.days_listed || 0;
+                        const cls = days > 200 ? 'days-danger' : days > 120 ? 'days-warning' : 'days-normal';
+                        html += `<tr>
+                            <td>${rankBadge(i)}</td>
+                            <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                                <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                            <td>$${(d.price || 0).toLocaleString()}</td>
+                            <td><span class="days-tag ${cls}">${days} 天</span></td>
+                            <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table></div></div>';
+                    bodyEl.innerHTML = html;
+                }
+            } catch (e) {
+                console.error(e);
+                bodyEl.innerHTML = '<div class="insight-empty" style="padding: 60px 0;">加载失败，请重试</div>';
+            }
+        }
+
+        // 显示价格趋势
+        async function showPriceTrend(uuid, name) {
+            if (!uuid) {
+                alert('该社区暂无采集数据');
+                return;
+            }
+
+            document.getElementById('loading-overlay').classList.add('active');
+
+            try {
+                const response = await fetch(`/api/stats/price-trend/${uuid}`);
+                const result = await response.json();
+
+                document.getElementById('price-modal-title').textContent = `${name} - 价格趋势`;
+
+                renderPriceChart(result);
+                renderPriceTable(result);
+
+                document.getElementById('price-modal').classList.add('active');
+
+            } catch (error) {
+                console.error('加载价格趋势失败:', error);
+                alert('加载价格趋势失败，请重试');
+            } finally {
+                document.getElementById('loading-overlay').classList.remove('active');
+            }
+        }
+
+        // 渲染图表
+        function renderChart(data) {
+            const ctx = document.getElementById('archive-chart').getContext('2d');
+
+            if (archiveChart) {
+                archiveChart.destroy();
+            }
+
+            const labels = data.map(item => `第${item.archive_no}轮`);
+            const floorplanData = data.map(item => item.floorplan_count || 0);
+            const propertyData = data.map(item => item.property_count || 0);
+
+            archiveChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '户型数量',
+                            data: floorplanData,
+                            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '房源数量',
+                            data: propertyData,
+                            backgroundColor: 'rgba(118, 75, 162, 0.7)',
+                            borderColor: 'rgba(118, 75, 162, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '每轮采集的户型和房源数量',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染统计表格
+        function renderStatsTable(data) {
+            const tbody = document.getElementById('stats-tbody');
+
+            tbody.innerHTML = data.map(item => {
+                return `
+                    <tr>
+                        <td>第 ${item.archive_no} 轮</td>
+                        <td>${item.archive_time || '-'}</td>
+                        <td>${item.floorplan_count || 0}</td>
+                        <td>${item.property_count || 0}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 渲染价格趋势图表
+        function renderPriceChart(data) {
+            const ctx = document.getElementById('price-chart').getContext('2d');
+
+            if (priceChart) {
+                priceChart.destroy();
+            }
+
+            const labels = data.map(item => `第${item.archive_no}轮`);
+            const minPrices = data.map(item => item.min_price || 0);
+            const avgPrices = data.map(item => item.avg_price || 0);
+            const maxPrices = data.map(item => item.max_price || 0);
+
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '最低价',
+                            data: minPrices,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: '平均价',
+                            data: avgPrices,
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: '最高价',
+                            data: maxPrices,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '价格趋势分析',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += '$' + context.parsed.y.toLocaleString();
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function (value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染价格趋势表格
+        function renderPriceTable(data) {
+            const tbody = document.getElementById('price-tbody');
+
+            tbody.innerHTML = data.map(item => {
+                return `
+                    <tr>
+                        <td>第 ${item.archive_no} 轮</td>
+                        <td>${item.archive_time || '-'}</td>
+                        <td>$${(item.min_price || 0).toLocaleString()}</td>
+                        <td>$${(item.avg_price || 0).toLocaleString()}</td>
+                        <td>$${(item.max_price || 0).toLocaleString()}</td>
+                        <td>${item.for_sale_count || 0}</td>
+                        <td>${item.coming_soon_count || 0}</td>
+                        <td>${item.sold_count || 0}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 渲染分页
+        function renderPagination(pagination) {
+            const { page, total_pages } = pagination;
+            const controls = document.getElementById('pagination-controls');
+
+            if (total_pages <= 1) {
+                controls.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            html += `<button class="page-btn ${page <= 1 ? 'disabled' : ''}" 
+                       onclick="loadData(${page - 1})" ${page <= 1 ? 'disabled' : ''}>上一页</button>`;
+
+            const maxVisible = 5;
+            let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+            let endPage = Math.min(total_pages, startPage + maxVisible - 1);
+
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="loadData(1)">1</button>`;
+                if (startPage > 2) {
+                    html += `<span class="page-btn disabled">...</span>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === page ? 'active' : ''}" 
+                           onclick="loadData(${i})">${i}</button>`;
+            }
+
+            if (endPage < total_pages) {
+                if (endPage < total_pages - 1) {
+                    html += `<span class="page-btn disabled">...</span>`;
+                }
+                html += `<button class="page-btn" onclick="loadData(${total_pages})">${total_pages}</button>`;
+            }
+
+            html += `<button class="page-btn ${page >= total_pages ? 'disabled' : ''}" 
+                       onclick="loadData(${page + 1})" ${page >= total_pages ? 'disabled' : ''}>下一页</button>`;
+
+            controls.innerHTML = html;
+        }
+
+        // 重置筛选
+        function resetFilters() {
+            document.getElementById('builder-filter').value = '';
+            document.getElementById('keyword-filter').value = '';
+            document.getElementById('page-size').value = '24';
+            loadData(1);
+        }
+
+        // 回车搜索
+        document.getElementById('keyword-filter').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                loadData(1);
+            }
+        });
+
+        // 页面加载时自动查询
+        document.addEventListener('DOMContentLoaded', function () {
+            loadData(1);
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    document.querySelector('.modal-overlay.active')?.classList.remove('active');
+                }
+            });
+
+            document.addEventListener('click', function (e) {
+                const closeBtn = e.target.classList.contains('modal-close') ? e.target : (e.target.closest?.('.modal-close') || null);
+                if (closeBtn) {
+                    closeBtn.closest('.modal-overlay')?.classList.remove('active');
+                }
+                if (e.target.classList.contains('modal-overlay')) {
+                    e.target.classList.remove('active');
+                }
+            });
+        });
+        // ===== Tab Switching =====
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach((b, i) => {
+                b.classList.toggle('active', (tab === 'dashboard' ? i === 0 : i === 1));
+            });
+            document.getElementById('tab-dashboard').classList.toggle('active', tab === 'dashboard');
+            document.getElementById('tab-insights').classList.toggle('active', tab === 'insights');
+            if (tab === 'insights' && !window._insightsLoaded) {
+                window._insightsLoaded = true;
+                loadPriceDrops();
+                loadActiveValue();
+                loadStagnant();
+            }
+        }
+
+        // ===== Rank Badge Helper =====
+        function rankBadge(i) {
+            const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-default';
+            return `<span class="rank-badge ${cls}">${i + 1}</span>`;
+        }
+
+        // ===== Load Price Drops =====
+        async function loadPriceDrops() {
+            const body = document.getElementById('price-drops-body');
+            body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
+            try {
+                const res = await fetch('/api/insights/price-drops');
+                const data = await res.json();
+                if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无降价数据</div>'; return; }
+                let html = '<table class="insight-table"><thead><tr>';
+                html += '<th>#</th><th>房源</th><th>社区 / 建商</th><th>峰值价格</th><th>当前价格</th><th>降价额</th><th>降幅</th><th>操作</th>';
+                html += '</tr></thead><tbody>';
+                data.forEach((d, i) => {
+                    html += `<tr>
+                        <td>${rankBadge(i)}</td>
+                        <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                            <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                        <td><span class="prop-title" title="${d.community_name || ''}">${d.community_name || '-'}</span>
+                            <div class="prop-sub">${d.builder_name || '-'}</div></td>
+                        <td>$${(d.highest_price || 0).toLocaleString()}</td>
+                        <td>$${(d.current_price || 0).toLocaleString()}</td>
+                        <td style="color:#f5576c;font-weight:700">-$${(d.drop_amount || 0).toLocaleString()}</td>
+                        <td><span class="drop-tag">-${d.drop_pct || 0}%</span></td>
+                        <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                body.innerHTML = html;
+            } catch (e) { body.innerHTML = '<div class="insight-empty">加载失败，请重试</div>'; }
+        }
+
+        // ===== Load Active Value =====
+        async function loadActiveValue() {
+            const body = document.getElementById('active-value-body');
+            body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
+            try {
+                const res = await fetch('/api/insights/active-value');
+                const data = await res.json();
+                if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无活跃数据</div>'; return; }
+                const maxAct = Math.max(...data.map(d => d.activity_count));
+                let html = '<table class="insight-table"><thead><tr>';
+                html += '<th>#</th><th>房源</th><th>社区 / 建商</th><th>当前价格</th><th>单呎价</th><th>变动次数</th><th>操作</th>';
+                html += '</tr></thead><tbody>';
+                data.forEach((d, i) => {
+                    const barW = Math.max(12, Math.round(d.activity_count / maxAct * 80));
+                    html += `<tr>
+                        <td>${rankBadge(i)}</td>
+                        <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                            <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                        <td><span class="prop-title" title="${d.community_name || ''}">${d.community_name || '-'}</span>
+                            <div class="prop-sub">${d.builder_name || '-'}</div></td>
+                        <td>$${(d.price || 0).toLocaleString()}</td>
+                        <td style="font-weight:600;color:#11998e">$${(d.price_per_sqft || 0).toLocaleString()}/sqft</td>
+                        <td><div class="activity-bar"><div class="bar" style="width:${barW}px"></div><span style="font-weight:600">${d.activity_count}</span></div>
+                            <div class="prop-sub">价格${d.price_changes}次 状态${d.status_changes}次</div></td>
+                        <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                body.innerHTML = html;
+            } catch (e) { body.innerHTML = '<div class="insight-empty">加载失败，请重试</div>'; }
+        }
+
+        // ===== Load Stagnant =====
+        async function loadStagnant() {
+            const body = document.getElementById('stagnant-body');
+            body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
+            try {
+                const res = await fetch('/api/insights/stagnant');
+                const data = await res.json();
+                if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无滞销数据</div>'; return; }
+                let html = '<table class="insight-table"><thead><tr>';
+                html += '<th>#</th><th>房源</th><th>社区 / 建商</th><th>当前价格</th><th>挂牌日期</th><th>已挂牌</th><th>操作</th>';
+                html += '</tr></thead><tbody>';
+                data.forEach((d, i) => {
+                    const days = d.days_listed || 0;
+                    const cls = days > 200 ? 'days-danger' : days > 120 ? 'days-warning' : 'days-normal';
+                    html += `<tr>
+                        <td>${rankBadge(i)}</td>
+                        <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                            <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                        <td><span class="prop-title" title="${d.community_name || ''}">${d.community_name || '-'}</span>
+                            <div class="prop-sub">${d.builder_name || '-'}</div></td>
+                        <td>$${(d.price || 0).toLocaleString()}</td>
+                        <td>${d.created_time || '-'}</td>
+                        <td><span class="days-tag ${cls}">${days} 天</span></td>
+                        <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                body.innerHTML = html;
+            } catch (e) { body.innerHTML = '<div class="insight-empty">加载失败，请重试</div>'; }
+        }
+
+        // ===== 加载社区专属降价排行 =====
+        async function loadModalPriceDrops(communityId) {
+            const body = document.getElementById('modal-price-drops-body');
+            body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
+            try {
+                const res = await fetch(`/api/insights/price-drops?community_id=${communityId}`);
+                const data = await res.json();
+                if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无降价数据</div>'; return; }
+                let html = '<table class="insight-table"><thead><tr>';
+                html += '<th>#</th><th>房源</th><th>当前价格</th><th>降价额</th><th>降幅</th><th>操作</th>';
+                html += '</tr></thead><tbody>';
+                data.forEach((d, i) => {
+                    html += `<tr>
+                        <td>${rankBadge(i)}</td>
+                        <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                            <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                        <td>$${(d.current_price || 0).toLocaleString()}</td>
+                        <td style="color:#f5576c;font-weight:700">-$${(d.drop_amount || 0).toLocaleString()}</td>
+                        <td><span class="drop-tag">-${d.drop_pct || 0}%</span></td>
+                        <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                body.innerHTML = html;
+            } catch (e) { body.innerHTML = '<div class="insight-empty">加载失败，请重试</div>'; }
+        }
+
+        // ===== 加载社区专属活跃高性价比 =====
+        async function loadModalActiveValue(communityId) {
+            const body = document.getElementById('modal-active-value-body');
+            body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
+            try {
+                const res = await fetch(`/api/insights/active-value?community_id=${communityId}`);
+                const data = await res.json();
+                if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无活跃数据</div>'; return; }
+                const maxAct = Math.max(...data.map(d => d.activity_count));
+                let html = '<table class="insight-table"><thead><tr>';
+                html += '<th>#</th><th>房源</th><th>当前价格</th><th>单呎价</th><th>变动次数</th><th>操作</th>';
+                html += '</tr></thead><tbody>';
+                data.forEach((d, i) => {
+                    const barW = Math.max(12, Math.round(d.activity_count / maxAct * 80));
+                    html += `<tr>
+                        <td>${rankBadge(i)}</td>
+                        <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                            <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                        <td>$${(d.price || 0).toLocaleString()}</td>
+                        <td style="font-weight:600;color:#11998e">$${(d.price_per_sqft || 0).toLocaleString()}/sqft</td>
+                        <td><div class="activity-bar"><div class="bar" style="width:${barW}px"></div><span style="font-weight:600">${d.activity_count}</span></div>
+                            <div class="prop-sub">价格${d.price_changes}次 状态${d.status_changes}次</div></td>
+                        <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                body.innerHTML = html;
+            } catch (e) { body.innerHTML = '<div class="insight-empty">加载失败，请重试</div>'; }
+        }
+
+        // ===== 加载社区专属滞销预警 =====
+        async function loadModalStagnant(communityId) {
+            const body = document.getElementById('modal-stagnant-body');
+            body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
+            try {
+                const res = await fetch(`/api/insights/stagnant?community_id=${communityId}`);
+                const data = await res.json();
+                if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无滞销数据</div>'; return; }
+                let html = '<table class="insight-table"><thead><tr>';
+                html += '<th>#</th><th>房源</th><th>当前价格</th><th>已挂牌</th><th>操作</th>';
+                html += '</tr></thead><tbody>';
+                data.forEach((d, i) => {
+                    const days = d.days_listed || 0;
+                    const cls = days > 200 ? 'days-danger' : days > 120 ? 'days-warning' : 'days-normal';
+                    html += `<tr>
+                        <td>${rankBadge(i)}</td>
+                        <td><span class="prop-title" title="${d.title || ''}">${d.title || '-'}</span>
+                            <div class="prop-sub">${d.bedrooms || 0}卧 ${d.bathrooms || 0}卫 ${d.size || 0}sqft</div></td>
+                        <td>$${(d.price || 0).toLocaleString()}</td>
+                        <td><span class="days-tag ${cls}">${days} 天</span></td>
+                        <td><a class="detail-link" href="/property-trend/${d.community_id}/${d.property_uuid}">查看详情 →</a></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                body.innerHTML = html;
+            } catch (e) { body.innerHTML = '<div class="insight-empty">加载失败，请重试</div>'; }
+        }
+    </script>
+</body>
+
+</html>
