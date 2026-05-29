@@ -1063,6 +1063,8 @@ def get_stats_communities():
     # 获取查询参数
     builder_id = request.args.get('builder_id', '').strip()
     keyword = request.args.get('keyword', '').strip()
+    prop_filter = request.args.get('prop_filter', 'active').strip()
+    sort_by = request.args.get('sort_by', 'update_time').strip()
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 20, type=int)
     
@@ -1086,8 +1088,20 @@ def get_stats_communities():
     if keyword:
         conditions.append("(cc.name LIKE %s OR cc.address LIKE %s)")
         params.extend([f'%{keyword}%', f'%{keyword}%'])
+        
+    if prop_filter == 'active':
+        conditions.append("EXISTS (SELECT 1 FROM property p WHERE p.community_id = cc.id)")
+    elif prop_filter == 'empty':
+        conditions.append("NOT EXISTS (SELECT 1 FROM property p WHERE p.community_id = cc.id)")
     
     where_clause = " AND ".join(conditions) if conditions else "1=1"
+    
+    # 动态构建排序
+    order_by_clause = "cc.update_time DESC"
+    if sort_by == 'prop_count':
+        order_by_clause = "(SELECT COUNT(*) FROM property p WHERE p.community_id = cc.id) DESC, cc.update_time DESC"
+    elif sort_by == 'archive_no':
+        order_by_clause = "cc.archive_no DESC, cc.update_time DESC"
     
     # 查询总数
     count_query = f"""
@@ -1106,13 +1120,14 @@ def get_stats_communities():
     data_query = f"""
         SELECT cc.id, cc.name, cc.address, cc.url, cc.json_url, 
                cc.status, cc.uuid, cc.archive_no,
+               (SELECT COUNT(*) FROM property p WHERE p.community_id = cc.id) as property_count,
                DATE_FORMAT(cc.created_time, '%%Y-%%m-%%d %%H:%%i') as created_time,
                DATE_FORMAT(cc.update_time, '%%Y-%%m-%%d %%H:%%i') as update_time,
                b.builder_name
         FROM community_cache cc
         LEFT JOIN builder b ON cc.builder = b.builder_id
         WHERE {where_clause}
-        ORDER BY cc.update_time DESC
+        ORDER BY {order_by_clause}
         LIMIT %s OFFSET %s
     """
     cursor.execute(data_query, params + [page_size, offset])

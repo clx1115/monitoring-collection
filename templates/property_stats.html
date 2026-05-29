@@ -64,43 +64,128 @@
             color: #888;
             margin-top: 4px;
         }
-        .filter-bar {
+        .advanced-filter-panel {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            border: 1px solid #f0f0f0;
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            width: 100%;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .filter-item label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 2px;
+        }
+        .filter-item select, 
+        .filter-item input {
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fff;
+            color: #2d3748;
+            transition: all 0.2s ease;
+            height: 42px;
+        }
+        .filter-item select:focus, 
+        .filter-item input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+        .range-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .range-group span {
+            color: #a0aec0;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 16px;
             flex-wrap: wrap;
             align-items: center;
         }
-        .filter-bar select, .filter-bar input {
-            padding: 10px 14px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 14px;
+            color: #4d5562;
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+            height: 42px;
         }
-        .filter-bar select:focus, .filter-bar input:focus {
-            outline: none;
-            border-color: #667eea;
+        .checkbox-item:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        .checkbox-item input {
+            cursor: pointer;
+            margin: 0;
+            width: 16px;
+            height: 16px;
+            accent-color: #667eea;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+            align-items: center;
         }
         .btn {
-            padding: 10px 20px;
+            padding: 10px 24px;
             border: none;
             border-radius: 8px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
         }
         .btn-secondary {
-            background: #f0f0f0;
-            color: #666;
+            background: #edf2f7;
+            color: #4a5568;
+        }
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            transform: translateY(-2px);
         }
         .property-grid {
             display: grid;
@@ -283,21 +368,105 @@
             </div>
         </div>
 
-        <div class="filter-bar">
-            <select id="status-filter">
-                <option value="">全部状态</option>
-                <option value="For Sale">在售</option>
-                <option value="Coming Soon">即将推出</option>
-                <option value="Sold">已售</option>
-            </select>
-            <select id="sort-by">
-                <option value="price-asc">价格从低到高</option>
-                <option value="price-desc">价格从高到低</option>
-                <option value="bedrooms">卧室数</option>
-                <option value="size">面积</option>
-            </select>
-            <button class="btn btn-primary" onclick="filterProperties()">筛选</button>
-            <button class="btn btn-secondary" onclick="resetFilter()">重置</button>
+        <div class="advanced-filter-panel">
+            <!-- Row 1: Basic Filters & Specifications -->
+            <div class="filter-row">
+                <div class="filter-item" style="width: 200px;">
+                    <label>🔍 房源名称和地址</label>
+                    <input type="text" id="keyword-filter" placeholder="搜索房源名称或地址...">
+                </div>
+                
+                <div class="filter-item" style="width: 130px;">
+                    <label>🚩 房源状态</label>
+                    <select id="status-filter">
+                        <option value="">全部状态</option>
+                        <option value="For Sale">在售</option>
+                        <option value="Coming Soon">即将推出</option>
+                        <option value="Sold">已售</option>
+                    </select>
+                </div>
+
+                <div class="filter-item" style="width: 140px;">
+                    <label>📐 户型筛选</label>
+                    <select id="layout-filter">
+                        <option value="">全部户型</option>
+                    </select>
+                </div>
+                
+                <div class="filter-item" style="width: 110px;">
+                    <label>🛏️ 卧室数量</label>
+                    <select id="bedrooms-filter">
+                        <option value="">全部卧室</option>
+                        <option value="2">2居及以上</option>
+                        <option value="3">3居及以上</option>
+                        <option value="4">4居及以上</option>
+                        <option value="5">5居及以上</option>
+                    </select>
+                </div>
+
+                <div class="filter-item" style="width: 110px;">
+                    <label>🚿 浴室数量</label>
+                    <select id="bathrooms-filter">
+                        <option value="">全部浴室</option>
+                        <option value="2">2卫及以上</option>
+                        <option value="3">3卫及以上</option>
+                        <option value="4">4卫及以上</option>
+                    </select>
+                </div>
+
+                <div class="filter-item" style="flex: 1; min-width: 180px;">
+                    <label>⚡ 排序规则</label>
+                    <select id="sort-by" style="width: 100%;">
+                        <option value="price-asc">价格：从低到高</option>
+                        <option value="price-desc">价格：从高到低</option>
+                        <option value="bedrooms">规格：卧室数从多到少</option>
+                        <option value="size">面积：从大到小</option>
+                        <option value="drop-pct">降价：比例从大到小</option>
+                        <option value="drop-amount">降价：金额从大到小</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Row 2: Range Filters, Checkboxes & Actions -->
+            <div class="filter-row" style="justify-content: space-between;">
+                <!-- Left: Numeric Ranges -->
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <div class="filter-item">
+                        <label>💰 价格范围 ($)</label>
+                        <div class="range-group">
+                            <input type="number" id="min-price" placeholder="最低" style="width: 110px;">
+                            <span>-</span>
+                            <input type="number" id="max-price" placeholder="最高" style="width: 110px;">
+                        </div>
+                    </div>
+
+                    <div class="filter-item">
+                        <label>📐 面积范围 (sqft)</label>
+                        <div class="range-group">
+                            <input type="number" id="min-size" placeholder="最小" style="width: 110px;">
+                            <span>-</span>
+                            <input type="number" id="max-size" placeholder="最大" style="width: 110px;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Checkboxes & Action Buttons -->
+                <div style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-top: auto;">
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="has-price-drop"> 📉 仅看降价房源
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="at-historical-low"> 🏷️ 仅看历史最低价
+                        </label>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button class="btn btn-primary" onclick="filterProperties()">查询</button>
+                        <button class="btn btn-secondary" onclick="resetFilter()">重置</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="property-grid" id="property-grid">
@@ -325,6 +494,7 @@
                 if (!response.ok) throw new Error('加载失败');
                 allProperties = await response.json();
                 
+                populateLayoutFilter(allProperties);
                 updateSummary(allProperties);
                 renderProperties(allProperties);
                 
@@ -340,6 +510,44 @@
             } finally {
                 document.getElementById('loading-overlay').classList.remove('active');
             }
+        }
+
+        function populateLayoutFilter(properties) {
+            const filter = document.getElementById('layout-filter');
+            filter.innerHTML = '<option value="">全部户型</option>';
+            
+            const seen = new Set();
+            const layouts = [];
+            
+            properties.forEach(p => {
+                if (p.bedrooms !== undefined && p.bathrooms !== undefined && p.bedrooms !== null && p.bathrooms !== null) {
+                    const key = `${p.bedrooms}-${p.bathrooms}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        layouts.push({
+                            bedrooms: parseFloat(p.bedrooms),
+                            bathrooms: parseFloat(p.bathrooms),
+                            key: key,
+                            label: `${p.bedrooms}卧 ${p.bathrooms}卫`
+                        });
+                    }
+                }
+            });
+            
+            // 排序：先按卧室数量升序，再按浴室数量升序
+            layouts.sort((a, b) => {
+                if (a.bedrooms !== b.bedrooms) {
+                    return a.bedrooms - b.bedrooms;
+                }
+                return a.bathrooms - b.bathrooms;
+            });
+            
+            layouts.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.key;
+                opt.textContent = l.label;
+                filter.appendChild(opt);
+            });
         }
 
         function updateSummary(properties) {
@@ -534,15 +742,79 @@
         }
 
         function filterProperties() {
+            const keyword = document.getElementById('keyword-filter').value.trim().toLowerCase();
             const statusFilter = document.getElementById('status-filter').value;
+            const layoutFilter = document.getElementById('layout-filter').value;
+            const bedroomsFilter = document.getElementById('bedrooms-filter').value;
+            const bathroomsFilter = document.getElementById('bathrooms-filter').value;
+            const minPrice = document.getElementById('min-price').value ? parseFloat(document.getElementById('min-price').value) : null;
+            const maxPrice = document.getElementById('max-price').value ? parseFloat(document.getElementById('max-price').value) : null;
+            const minSize = document.getElementById('min-size').value ? parseFloat(document.getElementById('min-size').value) : null;
+            const maxSize = document.getElementById('max-size').value ? parseFloat(document.getElementById('max-size').value) : null;
+            const hasPriceDrop = document.getElementById('has-price-drop').checked;
+            const atHistoricalLow = document.getElementById('at-historical-low').checked;
             const sortBy = document.getElementById('sort-by').value;
             
             let filtered = [...allProperties];
             
+            // 1. 关键字/房号/地址过滤
+            if (keyword) {
+                filtered = filtered.filter(p => {
+                    const title = (p.title || '').toLowerCase();
+                    return title.includes(keyword);
+                });
+            }
+            
+            // 2. 状态过滤
             if (statusFilter) {
                 filtered = filtered.filter(p => p.status === statusFilter);
             }
+
+            // 2.5. 户型过滤 (精确匹配)
+            if (layoutFilter) {
+                const [beds, baths] = layoutFilter.split('-');
+                filtered = filtered.filter(p => p.bedrooms == parseFloat(beds) && p.bathrooms == parseFloat(baths));
+            }
             
+            // 3. 卧室过滤
+            if (bedroomsFilter) {
+                const minBeds = parseInt(bedroomsFilter);
+                filtered = filtered.filter(p => (p.bedrooms || 0) >= minBeds);
+            }
+            
+            // 4. 浴室过滤
+            if (bathroomsFilter) {
+                const minBaths = parseFloat(bathroomsFilter);
+                filtered = filtered.filter(p => (p.bathrooms || 0) >= minBaths);
+            }
+            
+            // 5. 价格区间过滤
+            if (minPrice !== null) {
+                filtered = filtered.filter(p => (p.price || 0) >= minPrice);
+            }
+            if (maxPrice !== null) {
+                filtered = filtered.filter(p => p.price > 0 && (p.price || 0) <= maxPrice);
+            }
+            
+            // 6. 面积区间过滤
+            if (minSize !== null) {
+                filtered = filtered.filter(p => (p.size || 0) >= minSize);
+            }
+            if (maxSize !== null) {
+                filtered = filtered.filter(p => (p.size || 0) <= maxSize);
+            }
+            
+            // 7. 仅看降价房源
+            if (hasPriceDrop) {
+                filtered = filtered.filter(p => p.price > 0 && p.highest_price > p.price);
+            }
+            
+            // 8. 仅看处于历史最低价
+            if (atHistoricalLow) {
+                filtered = filtered.filter(p => p.price > 0 && p.lowest_price > 0 && p.price <= p.lowest_price);
+            }
+            
+            // 9. 排序逻辑
             filtered.sort((a, b) => {
                 switch(sortBy) {
                     case 'price-asc':
@@ -553,6 +825,14 @@
                         return (b.bedrooms || 0) - (a.bedrooms || 0);
                     case 'size':
                         return (b.size || 0) - (a.size || 0);
+                    case 'drop-pct':
+                        const aDropPct = a.highest_price > a.price ? (a.highest_price - a.price) / a.highest_price : 0;
+                        const bDropPct = b.highest_price > b.price ? (b.highest_price - b.price) / b.highest_price : 0;
+                        return bDropPct - aDropPct;
+                    case 'drop-amount':
+                        const aDropAmt = a.highest_price > a.price ? (a.highest_price - a.price) : 0;
+                        const bDropAmt = b.highest_price > b.price ? (b.highest_price - b.price) : 0;
+                        return bDropAmt - aDropAmt;
                     default:
                         return 0;
                 }
@@ -569,7 +849,17 @@
         }
 
         function resetFilter() {
+            document.getElementById('keyword-filter').value = '';
             document.getElementById('status-filter').value = '';
+            document.getElementById('layout-filter').value = '';
+            document.getElementById('bedrooms-filter').value = '';
+            document.getElementById('bathrooms-filter').value = '';
+            document.getElementById('min-price').value = '';
+            document.getElementById('max-price').value = '';
+            document.getElementById('min-size').value = '';
+            document.getElementById('max-size').value = '';
+            document.getElementById('has-price-drop').checked = false;
+            document.getElementById('at-historical-low').checked = false;
             document.getElementById('sort-by').value = 'price-asc';
             renderProperties(allProperties);
             loadAllPropertyHistory();
