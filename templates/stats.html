@@ -802,6 +802,234 @@
         .refresh-btn:hover {
             background: rgba(255, 255, 255, 0.4);
         }
+
+        /* ===== Property Details Grid & Sparkline Overrides (Image 2 style) ===== */
+        .advanced-filter-panel {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            border: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            width: 100%;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .filter-item label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 2px;
+        }
+        .filter-item select, 
+        .filter-item input {
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fff;
+            color: #2d3748;
+            transition: all 0.2s ease;
+            height: 42px;
+        }
+        .filter-item select:focus, 
+        .filter-item input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+        .range-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .range-group span {
+            color: #a0aec0;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #4d5562;
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+            height: 42px;
+        }
+        .checkbox-item:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        .checkbox-item input {
+            cursor: pointer;
+            margin: 0;
+            width: 16px;
+            height: 16px;
+            accent-color: #667eea;
+        }
+        .property-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .property-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.3s;
+            border: 1px solid #eef0f5;
+        }
+        .property-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-color: #667eea;
+        }
+        .property-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .property-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+            margin-right: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .property-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .status-for-sale {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-coming-soon {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-sold {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-unknown {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .property-info {
+            padding: 12px 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background: #fafbfc;
+        }
+        .info-cell {
+            text-align: center;
+        }
+        .info-cell .value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        .info-cell .label {
+            font-size: 11px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .price-highlight {
+            color: #667eea;
+        }
+        .property-chart {
+            padding: 16px 20px;
+            height: 220px;
+        }
+        .property-chart-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .property-link {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            background: #f8f9fa;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            border-top: 1px solid #f0f0f0;
+            transition: background 0.3s;
+        }
+        .property-link:hover {
+            background: #667eea;
+            color: white;
+        }
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
+        }
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 
@@ -882,7 +1110,146 @@
 
         <!-- Tab 2: Insights -->
         <div class="tab-pane" id="tab-insights">
-            <div class="insights-grid">
+            <!-- Advanced combined Filter Bar (Image 2 style) -->
+            <div class="advanced-filter-panel">
+                <!-- Row 1: Builder & Community Selects -->
+                <div class="filter-row">
+                    <div class="filter-item" style="width: 240px;">
+                        <label>🏗️ 筛选建商</label>
+                        <select id="insight-builder-filter" onchange="onInsightBuilderChange()">
+                            <option value="">全部建商</option>
+                            {% for builder in builders %}
+                            <option value="{{ builder.builder_id }}">{{ builder.builder_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-item" style="width: 280px;">
+                        <label>📍 筛选社区</label>
+                        <select id="insight-community-filter" onchange="onInsightCommunityChange()">
+                            <option value="">全部社区 (先选择建商)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item" style="width: 200px;">
+                        <label>🔍 房源名称和地址</label>
+                        <input type="text" id="insight-keyword-filter" placeholder="搜索房源名称或地址...">
+                    </div>
+                    
+                    <div class="filter-item" style="width: 120px;">
+                        <label>🚩 房源状态</label>
+                        <select id="insight-status-filter">
+                            <option value="">全部状态</option>
+                            <option value="For Sale">在售</option>
+                            <option value="Coming Soon">即将推出</option>
+                            <option value="Sold">已售</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item" style="width: 130px;">
+                        <label>📐 户型筛选</label>
+                        <select id="insight-layout-filter">
+                            <option value="">全部户型</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Row 2: Specifications, Ranges, Checkboxes & Actions -->
+                <div class="filter-row" style="justify-content: space-between;">
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <div class="filter-item" style="width: 110px;">
+                            <label>🛏️ 卧室数量</label>
+                            <select id="insight-bedrooms-filter">
+                                <option value="">全部卧室</option>
+                                <option value="2">2居及以上</option>
+                                <option value="3">3居及以上</option>
+                                <option value="4">4居及以上</option>
+                                <option value="5">5居及以上</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-item" style="width: 110px;">
+                            <label>🚿 浴室数量</label>
+                            <select id="insight-bathrooms-filter">
+                                <option value="">全部浴室</option>
+                                <option value="2">2卫及以上</option>
+                                <option value="3">3卫及以上</option>
+                                <option value="4">4卫及以上</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-item">
+                            <label>💰 价格范围 ($)</label>
+                            <div class="range-group">
+                                <input type="number" id="insight-min-price" placeholder="最低" style="width: 100px;">
+                                <span>-</span>
+                                <input type="number" id="insight-max-price" placeholder="最高" style="width: 100px;">
+                            </div>
+                        </div>
+
+                        <div class="filter-item">
+                            <label>📐 面积范围 (sqft)</label>
+                            <div class="range-group">
+                                <input type="number" id="insight-min-size" placeholder="最小" style="width: 100px;">
+                                <span>-</span>
+                                <input type="number" id="insight-max-size" placeholder="最大" style="width: 100px;">
+                            </div>
+                        </div>
+
+                        <div class="filter-item" style="width: 180px;">
+                            <label>⚡ 排序规则</label>
+                            <select id="insight-sort-by" style="width: 100%;">
+                                <option value="price-asc">价格：从低到高</option>
+                                <option value="price-desc">价格：从高到低</option>
+                                <option value="bedrooms">规格：卧室数从多到少</option>
+                                <option value="size">面积：从大到小</option>
+                                <option value="drop-pct">降价：比例从大到小</option>
+                                <option value="drop-amount">降价：金额从大到小</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-top: auto;">
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="insight-has-price-drop"> 📉 仅看降价房源
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="insight-at-historical-low"> 🏷️ 仅看历史最低价
+                            </label>
+                        </div>
+                        
+                        <div class="filter-actions">
+                            <button class="btn btn-primary" onclick="queryInsightProperties()">查询</button>
+                            <button class="btn btn-secondary" onclick="resetInsightFilters()">重置</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section B: Property Grid Details -->
+            <div id="insight-property-section" style="margin-top: 32px; display: none;">
+                <div class="insight-panel">
+                    <div class="insight-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <h3 id="insight-property-grid-title">🏠 房源详情列表</h3>
+                        <span id="insight-property-count-badge" style="background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold;">0 套房源</span>
+                    </div>
+                    <div class="insight-body" style="padding: 20px; background: #fafbfc;">
+                        <div class="property-grid" id="insight-property-grid">
+                            <!-- Cards render dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hint placeholder when no community is selected -->
+            <div id="insight-hint-placeholder" style="margin-top: 32px; text-align: center; padding: 40px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1px dashed #e2e8f0;">
+                <div style="font-size: 40px; margin-bottom: 12px;">💡</div>
+                <h4 style="margin: 0 0 8px 0; color: #4a5568; font-size: 16px;">解锁房源详情与价格走势图</h4>
+                <p style="margin: 0; color: #a0aec0; font-size: 14px;">在上方选择一个具体的<b>社区</b>，即可在此处查看该社区所有房源 of the selected builder and filter them dynamically!</p>
+            </div>
+
+            <!-- Section A: Top 10 Insights -->
+            <div class="insights-grid" style="margin-top: 32px;">
 
                 <!-- Widget 1: Price Drops -->
                 <div class="insight-panel">
@@ -1584,6 +1951,13 @@
                 loadPriceDrops();
                 loadActiveValue();
                 loadStagnant();
+                
+                // Add keypress listener for insight keyword filter
+                document.getElementById('insight-keyword-filter').addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        queryInsightProperties();
+                    }
+                });
             }
         }
 
@@ -1595,10 +1969,13 @@
 
         // ===== Load Price Drops =====
         async function loadPriceDrops() {
+            const builderId = document.getElementById('insight-builder-filter').value;
+            const communityId = document.getElementById('insight-community-filter').value;
+            
             const body = document.getElementById('price-drops-body');
             body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
             try {
-                const res = await fetch('/api/insights/price-drops');
+                const res = await fetch(`/api/insights/price-drops?builder_id=${builderId}&community_id=${communityId}`);
                 const data = await res.json();
                 if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无降价数据</div>'; return; }
                 let html = '<table class="insight-table"><thead><tr>';
@@ -1625,10 +2002,13 @@
 
         // ===== Load Active Value =====
         async function loadActiveValue() {
+            const builderId = document.getElementById('insight-builder-filter').value;
+            const communityId = document.getElementById('insight-community-filter').value;
+            
             const body = document.getElementById('active-value-body');
             body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
             try {
-                const res = await fetch('/api/insights/active-value');
+                const res = await fetch(`/api/insights/active-value?builder_id=${builderId}&community_id=${communityId}`);
                 const data = await res.json();
                 if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无活跃数据</div>'; return; }
                 const maxAct = Math.max(...data.map(d => d.activity_count));
@@ -1657,10 +2037,13 @@
 
         // ===== Load Stagnant =====
         async function loadStagnant() {
+            const builderId = document.getElementById('insight-builder-filter').value;
+            const communityId = document.getElementById('insight-community-filter').value;
+            
             const body = document.getElementById('stagnant-body');
             body.innerHTML = '<div class="insight-loading"><div class="spinner-sm"></div><br>加载中...</div>';
             try {
-                const res = await fetch('/api/insights/stagnant');
+                const res = await fetch(`/api/insights/stagnant?builder_id=${builderId}&community_id=${communityId}`);
                 const data = await res.json();
                 if (!data.length) { body.innerHTML = '<div class="insight-empty">暂无滞销数据</div>'; return; }
                 let html = '<table class="insight-table"><thead><tr>';
@@ -1684,6 +2067,427 @@
                 html += '</tbody></table>';
                 body.innerHTML = html;
             } catch (e) { body.innerHTML = '<div class="insight-empty">加载失败，请重试</div>'; }
+        }
+
+        // ===== Dynamic Builder & Community link logic =====
+        async function onInsightBuilderChange() {
+            const builderSelect = document.getElementById('insight-builder-filter');
+            const communitySelect = document.getElementById('insight-community-filter');
+            const builderId = builderSelect.value;
+            
+            communitySelect.innerHTML = '<option value="">加载中...</option>';
+            try {
+                if (builderId) {
+                    const res = await fetch(`/api/communities?builder_id=${builderId}`);
+                    const data = await res.json();
+                    
+                    let html = '<option value="">全部社区</option>';
+                    data.forEach(c => {
+                        html += `<option value="${c.id}" data-uuid="${c.uuid}">${c.name}</option>`;
+                    });
+                    communitySelect.innerHTML = html;
+                } else {
+                    communitySelect.innerHTML = '<option value="">全部社区 (先选择建商)</option>';
+                }
+            } catch (e) {
+                console.error("加载社区列表失败:", e);
+                communitySelect.innerHTML = '<option value="">加载失败，请重试</option>';
+            }
+            
+            loadPriceDrops();
+            loadActiveValue();
+            loadStagnant();
+            
+            document.getElementById('insight-property-section').style.display = 'none';
+            document.getElementById('insight-hint-placeholder').style.display = 'block';
+        }
+
+        async function onInsightCommunityChange() {
+            loadPriceDrops();
+            loadActiveValue();
+            loadStagnant();
+            
+            const communityId = document.getElementById('insight-community-filter').value;
+            if (communityId) {
+                document.getElementById('insight-hint-placeholder').style.display = 'none';
+                document.getElementById('insight-property-section').style.display = 'block';
+                loadInsightProperties(communityId);
+            } else {
+                document.getElementById('insight-property-section').style.display = 'none';
+                document.getElementById('insight-hint-placeholder').style.display = 'block';
+            }
+        }
+
+        // ===== Load Property details card list (Image 2 style) =====
+        let insightAllProperties = [];
+        let insightPropertyCharts = {};
+
+        async function loadInsightProperties(communityId) {
+            const grid = document.getElementById('insight-property-grid');
+            grid.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>加载房源数据中...</p></div>';
+            
+            try {
+                const response = await fetch(`/api/properties/${communityId}`);
+                if (!response.ok) throw new Error('加载失败');
+                insightAllProperties = await response.json();
+                
+                populateInsightLayoutFilter(insightAllProperties);
+                renderInsightProperties(insightAllProperties);
+                
+                await loadAllInsightPropertyHistory(communityId);
+            } catch (error) {
+                console.error('加载房源失败:', error);
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">❌</div>
+                        <p>加载房源数据失败: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function populateInsightLayoutFilter(properties) {
+            const filter = document.getElementById('insight-layout-filter');
+            filter.innerHTML = '<option value="">全部户型</option>';
+            
+            const seen = new Set();
+            const layouts = [];
+            
+            properties.forEach(p => {
+                if (p.bedrooms !== undefined && p.bathrooms !== undefined && p.bedrooms !== null && p.bathrooms !== null) {
+                    const key = `${p.bedrooms}-${p.bathrooms}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        layouts.push({
+                            bedrooms: parseFloat(p.bedrooms),
+                            bathrooms: parseFloat(p.bathrooms),
+                            key: key,
+                            label: `${p.bedrooms}卧 ${p.bathrooms}卫`
+                        });
+                    }
+                }
+            });
+            
+            layouts.sort((a, b) => {
+                if (a.bedrooms !== b.bedrooms) {
+                    return a.bedrooms - b.bedrooms;
+                }
+                return a.bathrooms - b.bathrooms;
+            });
+            
+            layouts.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.key;
+                opt.textContent = l.label;
+                filter.appendChild(opt);
+            });
+        }
+
+        function renderInsightProperties(properties) {
+            const grid = document.getElementById('insight-property-grid');
+            const badge = document.getElementById('insight-property-count-badge');
+            
+            badge.textContent = `${properties.length} 套房源`;
+            
+            if (!properties || properties.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>没有找到满足筛选条件的房源数据</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = properties.map((prop) => {
+                const statusClass = getInsightStatusClass(prop.status);
+                const statusText = getInsightStatusText(prop.status);
+                const communityId = prop.community_id;
+                
+                return `
+                    <div class="property-card" id="insight-prop-${prop.property_uuid}">
+                        <div class="property-card-header">
+                            <div class="property-title" title="${prop.title || ''}">${prop.title || '未命名房源'}</div>
+                            <span class="property-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="property-info">
+                            <div class="info-cell">
+                                <div class="value">${prop.bedrooms || '-'}</div>
+                                <div class="label">卧室</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.bathrooms || '-'}</div>
+                                <div class="label">浴室</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.size ? prop.size.toLocaleString() : '-'}</div>
+                                <div class="label">面积(sqft)</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value price-highlight">${prop.price ? '$' + prop.price.toLocaleString() : '-'}</div>
+                                <div class="label">当前价格</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.lowest_price ? '$' + prop.lowest_price.toLocaleString() : '-'}</div>
+                                <div class="label">历史最低</div>
+                            </div>
+                            <div class="info-cell">
+                                <div class="value">${prop.highest_price ? '$' + prop.highest_price.toLocaleString() : '-'}</div>
+                                <div class="label">历史最高</div>
+                            </div>
+                        </div>
+                        <div class="property-chart">
+                            <div class="property-chart-title">📈 价格趋势</div>
+                            <canvas id="insight-chart-${prop.property_uuid}"></canvas>
+                        </div>
+                        <a href="/property-trend/${communityId}/${prop.property_uuid}" class="property-link" target="_blank">
+                            查看详细走势 →
+                        </a>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getInsightStatusClass(status) {
+            switch(status) {
+                case 'For Sale': return 'status-for-sale';
+                case 'Coming Soon': return 'status-coming-soon';
+                case 'Sold': return 'status-sold';
+                default: return 'status-unknown';
+            }
+        }
+
+        function getInsightStatusText(status) {
+            switch(status) {
+                case 'For Sale': return '在售';
+                case 'Coming Soon': return '即将推出';
+                case 'Sold': return '已售';
+                default: return status || '未知';
+            }
+        }
+
+        async function loadAllInsightPropertyHistory(communityId) {
+            const batchSize = 5;
+            for (let i = 0; i < insightAllProperties.length; i += batchSize) {
+                const batch = insightAllProperties.slice(i, i + batchSize);
+                await Promise.all(batch.map(prop => loadInsightPropertyHistory(communityId, prop)));
+            }
+        }
+
+        async function loadInsightPropertyHistory(communityId, prop) {
+            try {
+                const response = await fetch(`/api/property-history/${communityId}/${prop.property_uuid}`);
+                if (!response.ok) return;
+                const history = await response.json();
+                
+                if (history && history.length > 0) {
+                    renderInsightPropertyChart(prop.property_uuid, history);
+                }
+            } catch (error) {
+                console.error(`加载房源 ${prop.property_uuid} 历史失败:`, error);
+            }
+        }
+
+        function renderInsightPropertyChart(propertyUuid, history) {
+            const canvas = document.getElementById(`insight-chart-${propertyUuid}`);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            if (insightPropertyCharts[propertyUuid]) {
+                insightPropertyCharts[propertyUuid].destroy();
+            }
+
+            const labels = history.map(h => h.archive_time || `第${h.archive_no}轮`);
+            const prices = history.map(h => h.listing_price || 0);
+
+            insightPropertyCharts[propertyUuid] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '价格',
+                        data: prices,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const item = history[index];
+                                    const price = context.parsed.y ? '$' + context.parsed.y.toLocaleString() : '-';
+                                    const statusMap = {
+                                        'For Sale': '在售',
+                                        'Coming Soon': '即将推出',
+                                        'Sold': '已售'
+                                    };
+                                    const status = item ? (statusMap[item.status] || item.status || '未知') : '未知';
+                                    return `价格: ${price} | 状态: ${status}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: { size: 9 }
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(v) {
+                                    return '$' + (v / 1000).toFixed(0) + 'k';
+                                }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ===== Advanced Filters Logic =====
+        function queryInsightProperties() {
+            const keyword = document.getElementById('insight-keyword-filter').value.trim().toLowerCase();
+            const statusFilter = document.getElementById('insight-status-filter').value;
+            const layoutFilter = document.getElementById('insight-layout-filter').value;
+            const bedroomsFilter = document.getElementById('insight-bedrooms-filter').value;
+            const bathroomsFilter = document.getElementById('insight-bathrooms-filter').value;
+            const minPrice = document.getElementById('insight-min-price').value ? parseFloat(document.getElementById('insight-min-price').value) : null;
+            const maxPrice = document.getElementById('insight-max-price').value ? parseFloat(document.getElementById('insight-max-price').value) : null;
+            const minSize = document.getElementById('insight-min-size').value ? parseFloat(document.getElementById('insight-min-size').value) : null;
+            const maxSize = document.getElementById('insight-max-size').value ? parseFloat(document.getElementById('insight-max-size').value) : null;
+            const hasPriceDrop = document.getElementById('insight-has-price-drop').checked;
+            const atHistoricalLow = document.getElementById('insight-at-historical-low').checked;
+            const sortBy = document.getElementById('insight-sort-by').value;
+            
+            loadPriceDrops();
+            loadActiveValue();
+            loadStagnant();
+            
+            const communityId = document.getElementById('insight-community-filter').value;
+            if (!communityId) {
+                return;
+            }
+            
+            let filtered = [...insightAllProperties];
+            
+            if (keyword) {
+                filtered = filtered.filter(p => {
+                    const title = (p.title || '').toLowerCase();
+                    return title.includes(keyword);
+                });
+            }
+            
+            if (statusFilter) {
+                filtered = filtered.filter(p => p.status === statusFilter);
+            }
+
+            if (layoutFilter) {
+                const [beds, baths] = layoutFilter.split('-');
+                filtered = filtered.filter(p => p.bedrooms == parseFloat(beds) && p.bathrooms == parseFloat(baths));
+            }
+            
+            if (bedroomsFilter) {
+                const minBeds = parseInt(bedroomsFilter);
+                filtered = filtered.filter(p => (p.bedrooms || 0) >= minBeds);
+            }
+            
+            if (bathroomsFilter) {
+                const minBaths = parseFloat(bathroomsFilter);
+                filtered = filtered.filter(p => (p.bathrooms || 0) >= minBaths);
+            }
+            
+            if (minPrice !== null) {
+                filtered = filtered.filter(p => (p.price || 0) >= minPrice);
+            }
+            if (maxPrice !== null) {
+                filtered = filtered.filter(p => p.price > 0 && (p.price || 0) <= maxPrice);
+            }
+            
+            if (minSize !== null) {
+                filtered = filtered.filter(p => (p.size || 0) >= minSize);
+            }
+            if (maxSize !== null) {
+                filtered = filtered.filter(p => (p.size || 0) <= maxSize);
+            }
+            
+            if (hasPriceDrop) {
+                filtered = filtered.filter(p => p.price > 0 && p.highest_price > p.price);
+            }
+            
+            if (atHistoricalLow) {
+                filtered = filtered.filter(p => p.price > 0 && p.lowest_price > 0 && p.price <= p.lowest_price);
+            }
+            
+            if (sortBy === 'price-asc') {
+                filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+            } else if (sortBy === 'price-desc') {
+                filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+            } else if (sortBy === 'bedrooms') {
+                filtered.sort((a, b) => (b.bedrooms || 0) - (a.bedrooms || 0));
+            } else if (sortBy === 'size') {
+                filtered.sort((a, b) => (b.size || 0) - (a.size || 0));
+            } else if (sortBy === 'drop-pct') {
+                filtered.sort((a, b) => {
+                    const pctA = a.highest_price > a.price ? (a.highest_price - a.price) / a.highest_price : 0;
+                    const pctB = b.highest_price > b.price ? (b.highest_price - b.price) / b.highest_price : 0;
+                    return pctB - pctA;
+                });
+            } else if (sortBy === 'drop-amount') {
+                filtered.sort((a, b) => {
+                    const amtA = a.highest_price > a.price ? (a.highest_price - a.price) : 0;
+                    const amtB = b.highest_price > b.price ? (b.highest_price - b.price) : 0;
+                    return amtB - amtA;
+                });
+            }
+            
+            renderInsightProperties(filtered);
+            
+            filtered.forEach(p => {
+                loadInsightPropertyHistory(communityId, p);
+            });
+        }
+
+        function resetInsightFilters() {
+            document.getElementById('insight-builder-filter').value = '';
+            document.getElementById('insight-community-filter').innerHTML = '<option value="">全部社区 (先选择建商)</option>';
+            document.getElementById('insight-keyword-filter').value = '';
+            document.getElementById('insight-status-filter').value = '';
+            document.getElementById('insight-layout-filter').value = '';
+            document.getElementById('insight-bedrooms-filter').value = '';
+            document.getElementById('insight-bathrooms-filter').value = '';
+            document.getElementById('insight-min-price').value = '';
+            document.getElementById('insight-max-price').value = '';
+            document.getElementById('insight-min-size').value = '';
+            document.getElementById('insight-max-size').value = '';
+            document.getElementById('insight-has-price-drop').checked = false;
+            document.getElementById('insight-at-historical-low').checked = false;
+            document.getElementById('insight-sort-by').value = 'price-asc';
+            
+            loadPriceDrops();
+            loadActiveValue();
+            loadStagnant();
+            
+            document.getElementById('insight-property-section').style.display = 'none';
+            document.getElementById('insight-hint-placeholder').style.display = 'block';
         }
 
         // ===== 加载社区专属降价排行 =====

@@ -1282,47 +1282,36 @@ def get_insight_price_drops():
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
     community_id = request.args.get('community_id', '').strip()
+    builder_id = request.args.get('builder_id', '').strip()
+    
+    query = """
+        SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+               p.community_id, p.bedrooms, p.bathrooms, p.size,
+               p.price as current_price, p.highest_price,
+               (p.highest_price - p.price) as drop_amount,
+               ROUND((p.highest_price - p.price) / p.highest_price * 100, 1) as drop_pct,
+               p.status,
+               DATE_FORMAT(p.update_time, '%%Y-%%m-%%d %%H:%%i') as update_time,
+               cc.name as community_name, cc.uuid as community_uuid,
+               b.builder_name
+        FROM property p
+        JOIN community_cache cc ON p.community_id = cc.id
+        LEFT JOIN builder b ON cc.builder = b.builder_id
+        WHERE p.status != 'Sold'
+          AND p.price > 0
+          AND p.highest_price > p.price
+    """
+    params = []
     if community_id:
-        cursor.execute("""
-            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
-                   p.community_id, p.bedrooms, p.bathrooms, p.size,
-                   p.price as current_price, p.highest_price,
-                   (p.highest_price - p.price) as drop_amount,
-                   ROUND((p.highest_price - p.price) / p.highest_price * 100, 1) as drop_pct,
-                   p.status,
-                   DATE_FORMAT(p.update_time, '%%Y-%%m-%%d %%H:%%i') as update_time,
-                   cc.name as community_name, cc.uuid as community_uuid,
-                   b.builder_name
-            FROM property p
-            JOIN community_cache cc ON p.community_id = cc.id
-            LEFT JOIN builder b ON cc.builder = b.builder_id
-            WHERE p.status != 'Sold'
-              AND p.price > 0
-              AND p.highest_price > p.price
-              AND p.community_id = %s
-            ORDER BY drop_amount DESC
-            LIMIT 10
-        """, (int(community_id),))
-    else:
-        cursor.execute("""
-            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
-                   p.community_id, p.bedrooms, p.bathrooms, p.size,
-                   p.price as current_price, p.highest_price,
-                   (p.highest_price - p.price) as drop_amount,
-                   ROUND((p.highest_price - p.price) / p.highest_price * 100, 1) as drop_pct,
-                   p.status,
-                   DATE_FORMAT(p.update_time, '%%Y-%%m-%%d %%H:%%i') as update_time,
-                   cc.name as community_name, cc.uuid as community_uuid,
-                   b.builder_name
-            FROM property p
-            JOIN community_cache cc ON p.community_id = cc.id
-            LEFT JOIN builder b ON cc.builder = b.builder_id
-            WHERE p.status != 'Sold'
-              AND p.price > 0
-              AND p.highest_price > p.price
-            ORDER BY drop_amount DESC
-            LIMIT 10
-        """)
+        query += " AND p.community_id = %s"
+        params.append(int(community_id))
+    if builder_id:
+        query += " AND cc.builder = %s"
+        params.append(int(builder_id))
+        
+    query += " ORDER BY drop_amount DESC LIMIT 10"
+    
+    cursor.execute(query, params)
     results = cursor.fetchall()
 
     serializable = []
@@ -1347,43 +1336,34 @@ def get_insight_active_value():
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
     community_id = request.args.get('community_id', '').strip()
+    builder_id = request.args.get('builder_id', '').strip()
+
+    query = """
+        SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+               p.community_id, p.bedrooms, p.bathrooms, p.size,
+               p.price, p.status,
+               ROUND(p.price / p.size, 0) as price_per_sqft,
+               p.lowest_price, p.highest_price,
+               cc.name as community_name, cc.uuid as community_uuid,
+               b.builder_name
+        FROM property p
+        JOIN community_cache cc ON p.community_id = cc.id
+        LEFT JOIN builder b ON cc.builder = b.builder_id
+        WHERE p.status != 'Sold'
+          AND p.price > 0
+          AND p.size > 0
+    """
+    params = []
     if community_id:
-        cursor.execute("""
-            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
-                   p.community_id, p.bedrooms, p.bathrooms, p.size,
-                   p.price, p.status,
-                   ROUND(p.price / p.size, 0) as price_per_sqft,
-                   p.lowest_price, p.highest_price,
-                   cc.name as community_name, cc.uuid as community_uuid,
-                   b.builder_name
-            FROM property p
-            JOIN community_cache cc ON p.community_id = cc.id
-            LEFT JOIN builder b ON cc.builder = b.builder_id
-            WHERE p.status != 'Sold'
-              AND p.price > 0
-              AND p.size > 0
-              AND p.community_id = %s
-            ORDER BY price_per_sqft ASC
-            LIMIT 50
-        """, (int(community_id),))
-    else:
-        cursor.execute("""
-            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
-                   p.community_id, p.bedrooms, p.bathrooms, p.size,
-                   p.price, p.status,
-                   ROUND(p.price / p.size, 0) as price_per_sqft,
-                   p.lowest_price, p.highest_price,
-                   cc.name as community_name, cc.uuid as community_uuid,
-                   b.builder_name
-            FROM property p
-            JOIN community_cache cc ON p.community_id = cc.id
-            LEFT JOIN builder b ON cc.builder = b.builder_id
-            WHERE p.status != 'Sold'
-              AND p.price > 0
-              AND p.size > 0
-            ORDER BY price_per_sqft ASC
-            LIMIT 50
-        """)
+        query += " AND p.community_id = %s"
+        params.append(int(community_id))
+    if builder_id:
+        query += " AND cc.builder = %s"
+        params.append(int(builder_id))
+        
+    query += " ORDER BY price_per_sqft ASC LIMIT 50"
+    
+    cursor.execute(query, params)
     candidates = cursor.fetchall()
 
     # Step 2: For each candidate, count activity from property_archive
@@ -1436,47 +1416,36 @@ def get_insight_stagnant():
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
     community_id = request.args.get('community_id', '').strip()
+    builder_id = request.args.get('builder_id', '').strip()
+
+    query = """
+        SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
+               p.community_id, p.bedrooms, p.bathrooms, p.size,
+               p.price, p.status,
+               p.lowest_price, p.highest_price,
+               DATE_FORMAT(p.created_time, '%%Y-%%m-%%d %%H:%%i') as created_time,
+               DATEDIFF(NOW(), p.created_time) as days_listed,
+               cc.name as community_name, cc.uuid as community_uuid,
+               b.builder_name
+        FROM property p
+        JOIN community_cache cc ON p.community_id = cc.id
+        LEFT JOIN builder b ON cc.builder = b.builder_id
+        WHERE p.status != 'Sold'
+          AND p.price > 0
+          AND p.title IS NOT NULL 
+          AND p.title != ''
+    """
+    params = []
     if community_id:
-        cursor.execute("""
-            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
-                   p.community_id, p.bedrooms, p.bathrooms, p.size,
-                   p.price, p.status,
-                   p.lowest_price, p.highest_price,
-                   DATE_FORMAT(p.created_time, '%%Y-%%m-%%d %%H:%%i') as created_time,
-                   DATEDIFF(NOW(), p.created_time) as days_listed,
-                   cc.name as community_name, cc.uuid as community_uuid,
-                   b.builder_name
-            FROM property p
-            JOIN community_cache cc ON p.community_id = cc.id
-            LEFT JOIN builder b ON cc.builder = b.builder_id
-            WHERE p.status != 'Sold'
-              AND p.price > 0
-              AND p.title IS NOT NULL 
-              AND p.title != ''
-              AND p.community_id = %s
-            ORDER BY p.created_time ASC
-            LIMIT 10
-        """, (int(community_id),))
-    else:
-        cursor.execute("""
-            SELECT p.id, CAST(p.title AS CHAR) as title, p.property_uuid,
-                   p.community_id, p.bedrooms, p.bathrooms, p.size,
-                   p.price, p.status,
-                   p.lowest_price, p.highest_price,
-                   DATE_FORMAT(p.created_time, '%%Y-%%m-%%d %%H:%%i') as created_time,
-                   DATEDIFF(NOW(), p.created_time) as days_listed,
-                   cc.name as community_name, cc.uuid as community_uuid,
-                   b.builder_name
-            FROM property p
-            JOIN community_cache cc ON p.community_id = cc.id
-            LEFT JOIN builder b ON cc.builder = b.builder_id
-            WHERE p.status != 'Sold'
-              AND p.price > 0
-              AND p.title IS NOT NULL 
-              AND p.title != ''
-            ORDER BY p.created_time ASC
-            LIMIT 10
-        """)
+        query += " AND p.community_id = %s"
+        params.append(int(community_id))
+    if builder_id:
+        query += " AND cc.builder = %s"
+        params.append(int(builder_id))
+        
+    query += " ORDER BY p.created_time ASC LIMIT 10"
+    
+    cursor.execute(query, params)
     results = cursor.fetchall()
 
     serializable = []
