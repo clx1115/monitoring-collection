@@ -6,6 +6,8 @@ import time
 import threading
 from datetime import datetime
 from dotenv import load_dotenv
+from dbutils.pooled_db import PooledDB
+
 
 # 加载环境变量
 load_dotenv()
@@ -214,8 +216,31 @@ DB_CONFIG = {
     'charset': 'utf8mb4'
 }
 
-def get_db_connection():
-    return pymysql.connect(**DB_CONFIG)
+# 创建数据库连接池，提高并发效能，并具有自动心跳检测和重连机制
+db_pool = PooledDB(
+    creator=pymysql,
+    maxconnections=10,  # 最大连接数
+    mincached=2,        # 最小空闲连接数
+    maxcached=5,        # 最大空闲连接数
+    blocking=True,      # 连接满时阻塞等待
+    ping=1,             # 获取连接前进行 ping 检查 (如失效自动重连)
+    **DB_CONFIG
+)
+
+def get_db_connection(max_retries=3, delay=1):
+    """获取数据库连接，内置重试与指数退避机制以应对不稳定的远程网络连接"""
+    for i in range(max_retries):
+        try:
+            conn = db_pool.connection()
+            # 显式执行心跳校验并强制重连
+            conn.ping(reconnect=True)
+            return conn
+        except (pymysql.err.OperationalError, pymysql.err.InterfaceError) as e:
+            print(f"⚠️ [Database Connection Error] (Retry {i+1}/{max_retries}): {str(e)}")
+            if i == max_retries - 1:
+                raise
+            time.sleep(delay * (2 ** i))
+
 
 @app.route('/')
 def index():

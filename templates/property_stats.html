@@ -496,15 +496,29 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(ctx) {
-                                    return '$' + ctx.parsed.y.toLocaleString();
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const item = history[index];
+                                    const price = context.parsed.y ? '$' + context.parsed.y.toLocaleString() : '-';
+                                    const statusMap = {
+                                        'For Sale': '在售',
+                                        'Coming Soon': '即将推出',
+                                        'Sold': '已售'
+                                    };
+                                    const status = item ? (statusMap[item.status] || item.status || '未知') : '未知';
+                                    return `价格: ${price} | 状态: ${status}`;
                                 }
                             }
                         }
                     },
                     scales: {
                         x: {
-                            display: false
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: { size: 9 }
+                            },
+                            grid: { display: false }
                         },
                         y: {
                             ticks: {
