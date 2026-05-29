@@ -1273,6 +1273,158 @@ def get_price_trend(uuid):
 # ==================== 批量采集功能结束 ====================
 
 
+
+@app.route('/api/stats/properties')
+def get_stats_properties():
+    """获取所有房源列表（带分页和过滤）"""
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('page_size', 24, type=int)
+    
+    builder_id = request.args.get('builder_id', '').strip()
+    community_id = request.args.get('community_id', '').strip()
+    keyword = request.args.get('keyword', '').strip()
+    status = request.args.get('status', '').strip()
+    bedrooms = request.args.get('bedrooms', '').strip()
+    bathrooms = request.args.get('bathrooms', '').strip()
+    
+    min_price = request.args.get('min_price', type=float)
+    max_price = request.args.get('max_price', type=float)
+    min_size = request.args.get('min_size', type=float)
+    max_size = request.args.get('max_size', type=float)
+    
+    has_price_drop = request.args.get('has_price_drop', '').strip().lower() in ['true', '1']
+    at_historical_low = request.args.get('at_historical_low', '').strip().lower() in ['true', '1']
+    sort_by = request.args.get('sort_by', 'price-asc').strip()
+
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 24
+        
+    conn = get_db_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    
+    conditions = []
+    params = []
+    
+    if builder_id:
+        conditions.append("cc.builder = %s")
+        params.append(int(builder_id))
+        
+    if community_id:
+        conditions.append("p.community_id = %s")
+        params.append(int(community_id))
+        
+    if keyword:
+        conditions.append("(CAST(p.title AS CHAR) LIKE %s OR p.address LIKE %s)")
+        params.extend([f'%{keyword}%', f'%{keyword}%'])
+        
+    if status:
+        conditions.append("p.status = %s")
+        params.append(status)
+        
+    if bedrooms:
+        conditions.append("p.bedrooms >= %s")
+        params.append(int(bedrooms))
+        
+    if bathrooms:
+        conditions.append("p.bathrooms >= %s")
+        params.append(float(bathrooms))
+        
+    if min_price is not None:
+        conditions.append("p.price >= %s")
+        params.append(min_price)
+        
+    if max_price is not None:
+        conditions.append("p.price > 0 AND p.price <= %s")
+        params.append(max_price)
+        
+    if min_size is not None:
+        conditions.append("p.size >= %s")
+        params.append(min_size)
+        
+    if max_size is not None:
+        conditions.append("p.size <= %s")
+        params.append(max_size)
+        
+    if has_price_drop:
+        conditions.append("p.price > 0 AND p.highest_price > p.price")
+        
+    if at_historical_low:
+        conditions.append("p.price > 0 AND p.lowest_price > 0 AND p.price <= p.lowest_price")
+        
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    
+    # 动态构建排序规则
+    order_by_clause = "p.price ASC"
+    if sort_by == 'price-desc':
+        order_by_clause = "p.price DESC"
+    elif sort_by == 'bedrooms':
+        order_by_clause = "p.bedrooms DESC, p.price ASC"
+    elif sort_by == 'size':
+        order_by_clause = "p.size DESC, p.price ASC"
+    elif sort_by == 'drop-pct':
+        order_by_clause = "CASE WHEN p.highest_price > p.price THEN (p.highest_price - p.price) / p.highest_price ELSE 0 END DESC, p.price ASC"
+    elif sort_by == 'drop-amount':
+        order_by_clause = "CASE WHEN p.highest_price > p.price THEN (p.highest_price - p.price) ELSE 0 END DESC, p.price ASC"
+
+    # 查询总数
+    count_query = f"""
+        SELECT COUNT(*) as total
+        FROM property p
+        JOIN community_cache cc ON p.community_id = cc.id
+        WHERE {where_clause}
+    """
+    cursor.execute(count_query, params)
+    total = cursor.fetchone()['total']
+    
+    # 计算分页
+    offset = (page - 1) * page_size
+    total_pages = (total + page_size - 1) // page_size
+    
+    # 查询当前页的房源
+    data_query = f"""
+        SELECT p.id, p.property_uuid, p.community_id,
+               CAST(p.title AS CHAR) as title,
+               p.bedrooms, p.bathrooms, p.size, p.price,
+               p.lowest_price, p.highest_price, p.status,
+               DATE_FORMAT(p.created_time, '%%Y-%%m-%%d %%H:%%i:%%s') as created_time,
+               DATE_FORMAT(p.update_time, '%%Y-%%m-%%d %%H:%%i:%%s') as update_time,
+               cc.name as community_name, cc.uuid as community_uuid
+        FROM property p
+        JOIN community_cache cc ON p.community_id = cc.id
+        WHERE {where_clause}
+        ORDER BY {order_by_clause}
+        LIMIT %s OFFSET %s
+    """
+    cursor.execute(data_query, params + [page_size, offset])
+    properties = cursor.fetchall()
+    
+    # 确保JSON序列化
+    serializable_properties = []
+    for prop in properties:
+        serializable_prop = {}
+        for key, value in prop.items():
+            if isinstance(value, bytes):
+                serializable_prop[key] = value.decode('utf-8', errors='ignore')
+            else:
+                serializable_prop[key] = value
+        serializable_properties.append(serializable_prop)
+        
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'data': serializable_properties,
+        'pagination': {
+            'page': page,
+            'page_size': page_size,
+            'total': total,
+            'total_pages': total_pages
+        }
+    })
+
+
 # ==================== 数据智能洞察 API ====================
 
 @app.route('/api/insights/price-drops')

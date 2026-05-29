@@ -1219,7 +1219,7 @@
                         </div>
                         
                         <div class="filter-actions">
-                            <button class="btn btn-primary" onclick="queryInsightProperties()">查询</button>
+                            <button class="btn btn-primary" onclick="queryInsightProperties(1)">查询</button>
                             <button class="btn btn-secondary" onclick="resetInsightFilters()">重置</button>
                         </div>
                     </div>
@@ -1227,7 +1227,7 @@
             </div>
 
             <!-- Section B: Property Grid Details -->
-            <div id="insight-property-section" style="margin-top: 32px; display: none;">
+            <div id="insight-property-section" style="margin-top: 32px; display: block;">
                 <div class="insight-panel">
                     <div class="insight-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                         <h3 id="insight-property-grid-title">🏠 房源详情列表</h3>
@@ -1237,12 +1237,18 @@
                         <div class="property-grid" id="insight-property-grid">
                             <!-- Cards render dynamically -->
                         </div>
+                        
+                        <!-- Tab 2: Pagination Controls -->
+                        <div class="pagination-section" id="insight-pagination-section" style="display: none; margin-top: 24px; box-shadow: none; border: 1px solid #eef0f5;">
+                            <div class="pagination-info" id="insight-pagination-info">共 0 条记录</div>
+                            <div class="pagination-controls" id="insight-pagination-controls"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Hint placeholder when no community is selected -->
-            <div id="insight-hint-placeholder" style="margin-top: 32px; text-align: center; padding: 40px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1px dashed #e2e8f0;">
+            <!-- Hint placeholder (hidden by default since properties load on init) -->
+            <div id="insight-hint-placeholder" style="display: none; margin-top: 32px; text-align: center; padding: 40px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1px dashed #e2e8f0;">
                 <div style="font-size: 40px; margin-bottom: 12px;">💡</div>
                 <h4 style="margin: 0 0 8px 0; color: #4a5568; font-size: 16px;">解锁房源详情与价格走势图</h4>
                 <p style="margin: 0; color: #a0aec0; font-size: 14px;">在上方选择一个具体的<b>社区</b>，即可在此处查看该社区所有房源 of the selected builder and filter them dynamically!</p>
@@ -1955,9 +1961,12 @@
                 // Add keypress listener for insight keyword filter
                 document.getElementById('insight-keyword-filter').addEventListener('keypress', function (e) {
                     if (e.key === 'Enter') {
-                        queryInsightProperties();
+                        queryInsightProperties(1);
                     }
                 });
+                
+                // Initialize default property list
+                queryInsightProperties(1);
             }
         }
 
@@ -2098,8 +2107,7 @@
             loadActiveValue();
             loadStagnant();
             
-            document.getElementById('insight-property-section').style.display = 'none';
-            document.getElementById('insight-hint-placeholder').style.display = 'block';
+            queryInsightProperties(1);
         }
 
         async function onInsightCommunityChange() {
@@ -2107,34 +2115,86 @@
             loadActiveValue();
             loadStagnant();
             
-            const communityId = document.getElementById('insight-community-filter').value;
-            if (communityId) {
-                document.getElementById('insight-hint-placeholder').style.display = 'none';
-                document.getElementById('insight-property-section').style.display = 'block';
-                loadInsightProperties(communityId);
-            } else {
-                document.getElementById('insight-property-section').style.display = 'none';
-                document.getElementById('insight-hint-placeholder').style.display = 'block';
-            }
+            queryInsightProperties(1);
         }
 
         // ===== Load Property details card list (Image 2 style) =====
         let insightAllProperties = [];
         let insightPropertyCharts = {};
 
-        async function loadInsightProperties(communityId) {
+        let insightCurrentPage = 1;
+        let insightPageSize = 24;
+
+        async function queryInsightProperties(page = 1) {
+            insightCurrentPage = page;
+            
+            const builderId = document.getElementById('insight-builder-filter').value;
+            const communityId = document.getElementById('insight-community-filter').value;
+            const keyword = document.getElementById('insight-keyword-filter').value.trim();
+            const status = document.getElementById('insight-status-filter').value;
+            const layoutKey = document.getElementById('insight-layout-filter').value;
+            const bedrooms = document.getElementById('insight-bedrooms-filter').value;
+            const bathrooms = document.getElementById('insight-bathrooms-filter').value;
+            
+            const minPrice = document.getElementById('insight-min-price').value.trim();
+            const maxPrice = document.getElementById('insight-max-price').value.trim();
+            const minSize = document.getElementById('insight-min-size').value.trim();
+            const maxSize = document.getElementById('insight-max-size').value.trim();
+            
+            const hasPriceDrop = document.getElementById('insight-has-price-drop').checked;
+            const atHistoricalLow = document.getElementById('insight-at-historical-low').checked;
+            const sortBy = document.getElementById('insight-sort-by').value;
+
             const grid = document.getElementById('insight-property-grid');
             grid.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>加载房源数据中...</p></div>';
-            
+            document.getElementById('insight-pagination-section').style.display = 'none';
+
             try {
-                const response = await fetch(`/api/properties/${communityId}`);
+                const params = new URLSearchParams({
+                    page: page,
+                    page_size: insightPageSize,
+                    builder_id: builderId,
+                    community_id: communityId,
+                    keyword: keyword,
+                    status: status,
+                    bedrooms: bedrooms,
+                    bathrooms: bathrooms,
+                    sort_by: sortBy
+                });
+
+                if (layoutKey) {
+                    const [beds, baths] = layoutKey.split('-');
+                    params.append('bedrooms', beds);
+                    params.append('bathrooms', baths);
+                }
+                
+                if (minPrice) params.append('min_price', minPrice);
+                if (maxPrice) params.append('max_price', maxPrice);
+                if (minSize) params.append('min_size', minSize);
+                if (maxSize) params.append('max_size', maxSize);
+                if (hasPriceDrop) params.append('has_price_drop', 'true');
+                if (atHistoricalLow) params.append('at_historical_low', 'true');
+
+                const response = await fetch(`/api/stats/properties?${params.toString()}`);
                 if (!response.ok) throw new Error('加载失败');
-                insightAllProperties = await response.json();
                 
-                populateInsightLayoutFilter(insightAllProperties);
-                renderInsightProperties(insightAllProperties);
+                const result = await response.json();
+                const properties = result.data;
+                const pagination = result.pagination;
+
+                // Render properties
+                renderInsightProperties(properties);
                 
-                await loadAllInsightPropertyHistory(communityId);
+                // Render pagination section
+                renderInsightPagination(pagination);
+
+                // Populate Layout Filter dynamically using the returned page's properties
+                populateInsightLayoutFilter(properties);
+
+                // Load History & Render sparklines
+                if (properties && properties.length > 0) {
+                    await loadAllInsightPropertyHistory(properties);
+                }
             } catch (error) {
                 console.error('加载房源失败:', error);
                 grid.innerHTML = `
@@ -2148,6 +2208,8 @@
 
         function populateInsightLayoutFilter(properties) {
             const filter = document.getElementById('insight-layout-filter');
+            const currentSelected = filter.value;
+            
             filter.innerHTML = '<option value="">全部户型</option>';
             
             const seen = new Set();
@@ -2179,6 +2241,9 @@
                 const opt = document.createElement('option');
                 opt.value = l.key;
                 opt.textContent = l.label;
+                if (l.key === currentSelected) {
+                    opt.selected = true;
+                }
                 filter.appendChild(opt);
             });
         }
@@ -2207,7 +2272,10 @@
                 return `
                     <div class="property-card" id="insight-prop-${prop.property_uuid}">
                         <div class="property-card-header">
-                            <div class="property-title" title="${prop.title || ''}">${prop.title || '未命名房源'}</div>
+                            <div>
+                                <div class="property-title" title="${prop.title || ''}">${prop.title || '未命名房源'}</div>
+                                <div style="font-size: 11px; color: #a0aec0; margin-top: 4px;">📍 ${prop.community_name || '未知社区'}</div>
+                            </div>
                             <span class="property-status ${statusClass}">${statusText}</span>
                         </div>
                         <div class="property-info">
@@ -2266,11 +2334,11 @@
             }
         }
 
-        async function loadAllInsightPropertyHistory(communityId) {
+        async function loadAllInsightPropertyHistory(properties) {
             const batchSize = 5;
-            for (let i = 0; i < insightAllProperties.length; i += batchSize) {
-                const batch = insightAllProperties.slice(i, i + batchSize);
-                await Promise.all(batch.map(prop => loadInsightPropertyHistory(communityId, prop)));
+            for (let i = 0; i < properties.length; i += batchSize) {
+                const batch = properties.slice(i, i + batchSize);
+                await Promise.all(batch.map(prop => loadInsightPropertyHistory(prop.community_id, prop)));
             }
         }
 
@@ -2363,107 +2431,57 @@
             });
         }
 
-        // ===== Advanced Filters Logic =====
-        function queryInsightProperties() {
-            const keyword = document.getElementById('insight-keyword-filter').value.trim().toLowerCase();
-            const statusFilter = document.getElementById('insight-status-filter').value;
-            const layoutFilter = document.getElementById('insight-layout-filter').value;
-            const bedroomsFilter = document.getElementById('insight-bedrooms-filter').value;
-            const bathroomsFilter = document.getElementById('insight-bathrooms-filter').value;
-            const minPrice = document.getElementById('insight-min-price').value ? parseFloat(document.getElementById('insight-min-price').value) : null;
-            const maxPrice = document.getElementById('insight-max-price').value ? parseFloat(document.getElementById('insight-max-price').value) : null;
-            const minSize = document.getElementById('insight-min-size').value ? parseFloat(document.getElementById('insight-min-size').value) : null;
-            const maxSize = document.getElementById('insight-max-size').value ? parseFloat(document.getElementById('insight-max-size').value) : null;
-            const hasPriceDrop = document.getElementById('insight-has-price-drop').checked;
-            const atHistoricalLow = document.getElementById('insight-at-historical-low').checked;
-            const sortBy = document.getElementById('insight-sort-by').value;
-            
-            loadPriceDrops();
-            loadActiveValue();
-            loadStagnant();
-            
-            const communityId = document.getElementById('insight-community-filter').value;
-            if (!communityId) {
+        function renderInsightPagination(pagination) {
+            const { page, total_pages, total } = pagination;
+            const controls = document.getElementById('insight-pagination-controls');
+            const info = document.getElementById('insight-pagination-info');
+            const section = document.getElementById('insight-pagination-section');
+
+            info.textContent = `共 ${total} 条记录，第 ${page}/${total_pages} 页`;
+
+            if (total_pages <= 1) {
+                controls.innerHTML = '';
+                section.style.display = total > 0 ? 'flex' : 'none';
                 return;
             }
-            
-            let filtered = [...insightAllProperties];
-            
-            if (keyword) {
-                filtered = filtered.filter(p => {
-                    const title = (p.title || '').toLowerCase();
-                    return title.includes(keyword);
-                });
-            }
-            
-            if (statusFilter) {
-                filtered = filtered.filter(p => p.status === statusFilter);
+
+            let html = '';
+
+            html += `<button class="page-btn ${page <= 1 ? 'disabled' : ''}" 
+                       onclick="queryInsightProperties(${page - 1})" ${page <= 1 ? 'disabled' : ''}>上一页</button>`;
+
+            const maxVisible = 5;
+            let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+            let endPage = Math.min(total_pages, startPage + maxVisible - 1);
+
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
             }
 
-            if (layoutFilter) {
-                const [beds, baths] = layoutFilter.split('-');
-                filtered = filtered.filter(p => p.bedrooms == parseFloat(beds) && p.bathrooms == parseFloat(baths));
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="queryInsightProperties(1)">1</button>`;
+                if (startPage > 2) {
+                    html += `<span class="page-btn disabled">...</span>`;
+                }
             }
-            
-            if (bedroomsFilter) {
-                const minBeds = parseInt(bedroomsFilter);
-                filtered = filtered.filter(p => (p.bedrooms || 0) >= minBeds);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === page ? 'active' : ''}" 
+                           onclick="queryInsightProperties(${i})">${i}</button>`;
             }
-            
-            if (bathroomsFilter) {
-                const minBaths = parseFloat(bathroomsFilter);
-                filtered = filtered.filter(p => (p.bathrooms || 0) >= minBaths);
+
+            if (endPage < total_pages) {
+                if (endPage < total_pages - 1) {
+                    html += `<span class="page-btn disabled">...</span>`;
+                }
+                html += `<button class="page-btn" onclick="queryInsightProperties(${total_pages})">${total_pages}</button>`;
             }
-            
-            if (minPrice !== null) {
-                filtered = filtered.filter(p => (p.price || 0) >= minPrice);
-            }
-            if (maxPrice !== null) {
-                filtered = filtered.filter(p => p.price > 0 && (p.price || 0) <= maxPrice);
-            }
-            
-            if (minSize !== null) {
-                filtered = filtered.filter(p => (p.size || 0) >= minSize);
-            }
-            if (maxSize !== null) {
-                filtered = filtered.filter(p => (p.size || 0) <= maxSize);
-            }
-            
-            if (hasPriceDrop) {
-                filtered = filtered.filter(p => p.price > 0 && p.highest_price > p.price);
-            }
-            
-            if (atHistoricalLow) {
-                filtered = filtered.filter(p => p.price > 0 && p.lowest_price > 0 && p.price <= p.lowest_price);
-            }
-            
-            if (sortBy === 'price-asc') {
-                filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-            } else if (sortBy === 'price-desc') {
-                filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-            } else if (sortBy === 'bedrooms') {
-                filtered.sort((a, b) => (b.bedrooms || 0) - (a.bedrooms || 0));
-            } else if (sortBy === 'size') {
-                filtered.sort((a, b) => (b.size || 0) - (a.size || 0));
-            } else if (sortBy === 'drop-pct') {
-                filtered.sort((a, b) => {
-                    const pctA = a.highest_price > a.price ? (a.highest_price - a.price) / a.highest_price : 0;
-                    const pctB = b.highest_price > b.price ? (b.highest_price - b.price) / b.highest_price : 0;
-                    return pctB - pctA;
-                });
-            } else if (sortBy === 'drop-amount') {
-                filtered.sort((a, b) => {
-                    const amtA = a.highest_price > a.price ? (a.highest_price - a.price) : 0;
-                    const amtB = b.highest_price > b.price ? (b.highest_price - b.price) : 0;
-                    return amtB - amtA;
-                });
-            }
-            
-            renderInsightProperties(filtered);
-            
-            filtered.forEach(p => {
-                loadInsightPropertyHistory(communityId, p);
-            });
+
+            html += `<button class="page-btn ${page >= total_pages ? 'disabled' : ''}" 
+                       onclick="queryInsightProperties(${page + 1})" ${page >= total_pages ? 'disabled' : ''}>下一页</button>`;
+
+            controls.innerHTML = html;
+            section.style.display = 'flex';
         }
 
         function resetInsightFilters() {
@@ -2486,8 +2504,7 @@
             loadActiveValue();
             loadStagnant();
             
-            document.getElementById('insight-property-section').style.display = 'none';
-            document.getElementById('insight-hint-placeholder').style.display = 'block';
+            queryInsightProperties(1);
         }
 
         // ===== 加载社区专属降价排行 =====
